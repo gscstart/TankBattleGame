@@ -498,11 +498,11 @@ GRID_H = 17
 MAP_PIXEL_W = GRID_W * TILE  # 612
 MAP_PIXEL_H = GRID_H * TILE  # 612
 MAP_X = (SCREEN_W - MAP_PIXEL_W) // 2  # 110
-BASE_GRID = (8, 15)  # 居中底部
-PLAYER_SPAWN = (8 * TILE, 15 * TILE)
+BASE_GRID = (8, 16)  # 居中底部，末行 GRID_H-1
+PLAYER_SPAWN = (8 * TILE, 15 * TILE)  # 基地上一行 GRID_H-2
 TANK_SIZE = 36
 BULLET_SIZE = 8  # 等比缩
-BULLET_SPEED = 240  # 像素速度按比例缩
+BULLET_SPEED = 320  # 像素/秒（保持原速，未按比例缩）
 ```
 
 **TILEMAP 自动适配**（因为 `MAP_W = GRID_W * TILE` 全局算），`Tilemap.from_layout` 接 17 字符串即可。**关卡数据**用 `world/generator.py` 程序化生成（决策 #3）。
@@ -518,7 +518,7 @@ BULLET_SPEED = 240  # 像素速度按比例缩
 
 ### 11.8 17×17 关卡设计提示
 
-- 基地 (8, 15)，玩家默认 (8, 15) 旁边出生
+- 基地 (8, 16)（末行 GRID_H-1），玩家默认 (8, 15) 旁边（上一行 GRID_H-2）出生
 - 敌人 3 个默认生成点 (0,0) / (8,0) / (16,0)
 - 砖块墙保护基地用 5×3 大小而不是原来 3×3
 - 路径宽度 1-2 格（坦克占 1 格，要留 1 格侧身空间）

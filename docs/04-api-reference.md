@@ -46,10 +46,10 @@
 | `ENEMIES_PER_LEVEL` | 15 | 默认每关敌人数（被 LEVEL_DIFFICULTY 覆盖） |
 | `MAX_ENEMIES_ON_SCREEN` | 3 | 默认同屏上限（被 LEVEL_DIFFICULTY 覆盖） |
 | `ENEMY_SPAWN_INTERVAL` | 2.0 | 默认生成间隔（被 LEVEL_DIFFICULTY 覆盖） |
-| `ENEMY_SPAWN_X` | `[0, 6, 12] × TILE` | 默认敌人生成 X |
-| `ENEMY_SPAWN_Y` | `TILE * 0` | 默认敌人生成 Y |
-| `PLAYER_SPAWN` | `(TILE*6, TILE*12)` | 玩家出生点 |
-| `BASE_GRID` | `(6, 12)` | 基地默认网格 |
+| `ENEMY_SPAWN_X` | `[0, GRID_W//2, GRID_W-1] × TILE` | 默认敌人生成 X（实际未用，spawn 走 `tilemap.enemy_spawns`） |
+| `ENEMY_SPAWN_Y` | `TILE * 0` | 默认敌人生成 Y（实际未用） |
+| `PLAYER_SPAWN` | `(TILE*(GRID_W//2), TILE*(GRID_H-2))` | 玩家出生点（实际未用，走 `tilemap.player_spawn`） |
+| `BASE_GRID` | `(GRID_W//2, GRID_H-1)` | 基地默认网格（实际未用，走 `tilemap.base_pos`） |
 
 ### 1.4 状态
 

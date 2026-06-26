@@ -70,7 +70,7 @@ class Level:
                 continue
             col, row = self.tilemap.enemy_spawns[idx]
             x, y = self.tilemap.grid_to_world(col, row)
-            spawn_rect = pygame.Rect(x, y, 48, 48)
+            spawn_rect = pygame.Rect(x, y, TILE, TILE)
             for e in self.enemies:
                 if e.dead:  # 尸体不算占用
                     continue
@@ -201,7 +201,7 @@ class Level:
                 # 25% 概率掉落道具
                 if random.random() < 0.25:
                     from entities.powerup import spawn_random_powerup
-                    pu = spawn_random_powerup(e.rect.centerx - 24, e.rect.centery - 24)
+                    pu = spawn_random_powerup(e.rect.centerx - TILE // 2, e.rect.centery - TILE // 2)
                     self.powerups.append(pu)
 
         # 道具

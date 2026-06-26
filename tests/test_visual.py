@@ -23,7 +23,7 @@ def make_empty_level():
     layout = ["." * GRID_W for _ in range(GRID_H)]
     _mid = GRID_W // 2
     layout[GRID_H - 2] = layout[GRID_H - 2][:_mid] + "P" + layout[GRID_H - 2][_mid+1:]
-    layout[GRID_H - 2] = layout[GRID_H - 2][:_mid] + "X" + layout[GRID_H - 2][_mid+1:]
+    layout[GRID_H - 1] = layout[GRID_H - 1][:_mid] + "X" + layout[GRID_H - 1][_mid+1:]
     row0 = list("." * GRID_W)
     for c in (0, _mid, GRID_W - 1):
         row0[c] = "E"

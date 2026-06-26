@@ -3,7 +3,7 @@ from enum import Enum
 
 # 屏幕尺寸
 SCREEN_W = 832
-SCREEN_H = 624
+# SCREEN_H 在下面由 HUD_H + MAP_PIXEL_H 推导
 
 # 地图区域（顶部留 HUD）
 HUD_H = 60

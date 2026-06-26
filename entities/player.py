@@ -6,7 +6,7 @@
 - 惯性滑行：松开方向键后，坦克继续沿最后方向移动一小段时间
 """
 import pygame
-from settings import Dir, PLAYER_SPEED, PLAYER_FIRE_COOLDOWN, RESPAWN_INVULN
+from settings import Dir, PLAYER_SPEED, PLAYER_FIRE_COOLDOWN, RESPAWN_INVULN, TILE
 from entities.tank import Tank
 import utils.colors as C
 
@@ -120,12 +120,12 @@ class PlayerTank(Tank):
                 if self.snap_axis is None:
                     if self.dir[0] == 0:
                         # 当前垂直移动，对齐 x
-                        target = round(self.rect.x / 48) * 48
+                        target = round(self.rect.x / TILE) * TILE
                         if target != self.rect.x:
                             self.snap_axis = 'x'
                             self.snap_target = target
                     else:
-                        target = round(self.rect.y / 48) * 48
+                        target = round(self.rect.y / TILE) * TILE
                         if target != self.rect.y:
                             self.snap_axis = 'y'
                             self.snap_target = target
