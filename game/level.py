@@ -13,6 +13,7 @@ from world.tilemap import TileMap
 from world.levels import get_level, get_level_difficulty
 from entities.player import PlayerTank
 from entities.enemy import EnemyTank
+from utils import events
 
 
 # 每个道具拾取时播放的音效（语义匹配）
@@ -89,6 +90,7 @@ class Level:
 
     def respawn_player(self):
         if self.lives <= 0:
+            events.publish(events.LEVEL_FAILED, reason="lives_zero")
             self.failed = True
             return
         col, row = self.tilemap.player_spawn
@@ -105,6 +107,7 @@ class Level:
         self._restore_shovel()
 
     def base_destroyed(self):
+        events.publish(events.LEVEL_FAILED, reason="base_destroyed")
         self.failed = True
 
     def update(self, dt: float):
@@ -145,6 +148,7 @@ class Level:
                 if self.lives > 0:
                     self.respawn_player()
                 else:
+                    events.publish(events.LEVEL_FAILED, reason="lives_zero")
                     self.failed = True
                 if hasattr(self, "_death_timer"):
                     del self._death_timer
@@ -198,6 +202,8 @@ class Level:
                 if not e.killed_by_powerup:
                     self.score += 100
                     self.enemies_killed += 1
+                    events.publish(events.ENTITY_KILLED, kind="enemy", owner="player",
+                                   x=e.rect.centerx, y=e.rect.centery, score_delta=100)
                 # 25% 概率掉落道具
                 if random.random() < 0.25:
                     from entities.powerup import spawn_random_powerup
@@ -210,6 +216,8 @@ class Level:
             # 检测玩家拾取
             if not self.players[0].dead and pu.rect.colliderect(self.players[0].rect):
                 self._apply_powerup(pu)
+                events.publish(events.POWERUP_PICKED, type=pu.type,
+                               x=pu.rect.centerx, y=pu.rect.centery)
                 pu.dead = True
         self.powerups = [pu for pu in self.powerups if not pu.dead]
 
@@ -220,10 +228,13 @@ class Level:
 
         # 基地
         if self.tilemap.base_tile and self.tilemap.base_tile.destroyed:
+            events.publish(events.BASE_DESTROYED)
+            events.publish(events.LEVEL_FAILED, reason="base_destroyed")
             self.failed = True
 
         # 通关
         if self.enemies_to_spawn <= 0 and len(self.enemies) == 0 and not self.failed:
+            events.publish(events.LEVEL_COMPLETED, score=self.score, level_index=self.index)
             self.completed = True
 
     def _apply_powerup(self, pu):
@@ -298,6 +309,7 @@ class Level:
         self.screen_shake_time = 0.3
         from utils.sound import play
         play("explosion")
+        events.publish(events.BASE_HIT)
 
     # ---- 渲染 ----
     def draw(self, surface: pygame.Surface):

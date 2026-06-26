@@ -160,6 +160,61 @@ AABB 碰撞，a 和 b 需要 `.rect` 或本身是 Rect。
 - `_ensure_mixer()`：首次调用时初始化 pygame.mixer，缺失 wav 时自动调 `gen_sounds.main()` 生成
 - 模块级单例状态：`_mixer_initialized`, `_sounds`, `_muted`, `_disabled`
 
+## 4.5 `utils/events.py` — 事件总线（v1.4 阶段 A2）
+
+publish-subscribe 模块，单线程同步触发，异常隔离。为成就（F10）、回放（F13）、CI 钩子（F12）提供解耦的事件流。
+
+### 事件名常量
+
+| 常量 | 字符串 | Payload（kwargs） |
+|------|--------|--------------------|
+| `ENTITY_KILLED` | `"entity.killed"` | `kind`, `owner`, `x`, `y`, `score_delta` |
+| `POWERUP_PICKED` | `"powerup.picked"` | `type`, `x`, `y` |
+| `BASE_HIT` | `"base.hit"` | （无） |
+| `BASE_DESTROYED` | `"base.destroyed"` | （无） |
+| `LEVEL_COMPLETED` | `"level.completed"` | `score`, `level_index` |
+| `LEVEL_FAILED` | `"level.failed"` | `reason`：`"base_destroyed"` \| `"lives_zero"` |
+
+### `subscribe(event_name, callback) -> callable`
+订阅事件，返回 `unsubscribe()` 函数。同一事件可多个订阅者；同一 callback 多次 subscribe 会被加多次。
+
+### `publish(event_name, **kwargs) -> None`
+同步触发所有订阅者。遍历时复制列表，回调内 unsubscribe 不影响本次 publish。**单个订阅者抛错被 try/except 吞掉并打印 traceback，不影响其他订阅者。**
+
+### `clear() -> None`
+清空所有订阅（测试用）。游戏正常运行时不需要调用。
+
+### `subscriber_count(event_name) -> int`
+返回某事件当前订阅者数量（测试/调试用）。
+
+### 用法示例
+
+```python
+from utils import events
+from utils.events import ENTITY_KILLED
+
+def on_kill(kind, owner, x, y, score_delta):
+    if kind == "enemy" and owner == "player":
+        achievements.unlock("first_blood")
+
+unsub = events.subscribe(ENTITY_KILLED, on_kill)
+# ... 之后
+unsub()  # 取消订阅
+```
+
+### 当前 `game/level.py` 触发点
+
+| 触发位置 | 事件 | 说明 |
+|----------|------|------|
+| 敌人被玩家击杀（`score += 100` 后） | `ENTITY_KILLED` | 含 kind="enemy", owner="player", score_delta=100 |
+| 道具拾取（`_apply_powerup` 后） | `POWERUP_PICKED` | 含 type |
+| `_on_base_hit`（基地被子弹击中） | `BASE_HIT` | — |
+| 基地被毁（`update` 末尾检测） | `BASE_DESTROYED` + `LEVEL_FAILED(reason="base_destroyed")` | 一起发 |
+| 关卡完成（敌人全灭） | `LEVEL_COMPLETED` | 含 score, level_index |
+| `respawn_player` lives 用尽 | `LEVEL_FAILED(reason="lives_zero")` | — |
+| `base_destroyed()` | `LEVEL_FAILED(reason="base_destroyed")` | — |
+| `update` 中 lives 耗尽 | `LEVEL_FAILED(reason="lives_zero")` | — |
+
 ---
 
 ## 5. `utils/colors.py` — 颜色常量

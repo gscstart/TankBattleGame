@@ -110,6 +110,7 @@ GitHub 搜索 `battle+city+pygame` 共 23 个结果，按 star 排序前 5：
 - `entities/enemy.py` 的 `TIER_FIRE_COOLDOWN` / `TIER_SPEED_MULT` / `TIER_BREAKS_STEEL` —— 加新 tier 改 3 处
 - `settings.LEVEL_DIFFICULTY` 数组 —— 加新关卡改 2 处
 - `state.*` 状态机 —— 加新状态改 3 处（handle_events / update / draw）
+- `utils/events.py` 的事件名常量 + `Level.update` 中的 publish 点 —— 加新事件改 2 处（常量 + 触发点），订阅方独立扩展无需改 Level
 
 ---
 
@@ -197,6 +198,7 @@ GitHub 搜索 `battle+city+pygame` 共 23 个结果，按 star 排序前 5：
 | 任务 | 收益 | 改动文件 |
 |------|------|----------|
 | **A1**: `self.player` → `self.players: list[PlayerTank]` refactor | 解锁 P2、成就、事件 | `game/level.py` 15 处 ✅ **2026-06-27** |
+| **A2**: 事件总线（`utils/events.py`） | 解锁成就、回放、CI 钩子 | 新文件 + 替换 5 处直接调用 ✅ **2026-06-27** |
 | **A2**: 事件总线（`utils/events.py`） | 解锁成就、回放、CI 钩子 | 新文件 + 替换 5 处直接调用 |
 | **A3**: `pytest` 框架 + GitHub Actions | 后续所有改动有保护网 | `tests/` 改写 + `.github/workflows/ci.yml` |
 | **A4**: 输入抽象层（`game/input.py`） | 解锁手柄、键位重映射 | 新文件 + `PlayerTank.handle_event` |
@@ -206,6 +208,7 @@ GitHub 搜索 `battle+city+pygame` 共 23 个结果，按 star 排序前 5：
 - 1 玩家玩法行为不变
 - `self.player` 引用数从 28 降到 0（全部改 `self.players[i]` 或遍历）
 - **A1 实施说明**（2026-06-27）：`game/level.py` 28 处 `self.player` → `self.players[0]`（保留 `[0]` 索引保持 1 玩家行为完全不变）；2 处列表操作改用 `self.players` 整体（`other_tanks.extend(self.players)`、`self.players + self.enemies`）；`Game.handle_events` 改为 `for p in self.level.players: p.handle_event(event)`，P2 实施时不用再改这一处；测试文件 4 个共 55 处同步更新；文档同步：`docs/03` Game 字段表。
+- **A2 实施说明**（2026-06-27）：新建 `utils/events.py`（publish-subscribe，同步触发，异常隔离），定义 6 个事件名常量（`ENTITY_KILLED`/`POWERUP_PICKED`/`BASE_HIT`/`BASE_DESTROYED`/`LEVEL_COMPLETED`/`LEVEL_FAILED`）；`game/level.py` 7 个关键点 publish（敌人击杀、道具拾取、基地被击中、基地被毁、关卡完成、3 处关卡失败），原直接调用 sound/score 行为不变；新增 `tests/test_events.py`（7 个测试用例：基本 publish、unsub、异常隔离、回调内 unsub、clear、空 publish、事件名常量），零 pygame 依赖跑得最快；文档同步：`docs/04` 新增 §4.5 events API 章节含 6 个事件 payload 表 + 触发点表，`docs/06` §3.3 扩展点加 events 钩子。
 
 ### 阶段 B — 可玩性提升（约 2-3 天）
 
@@ -364,6 +367,7 @@ B6 (i18n) ─────► C5 (成就国际化)
 | 1.1 | 2026-06-26 | 加入决策记录 v2：双人独立生命 / 生存作为关 7 / 程序化关卡 / 编辑器推迟；新增 §11 地图尺寸扩展分析 |
 | 1.2 | 2026-06-26 | 决策 #5 选 C（17×17/TILE=36）并实施：settings/levels/tilemap/tests/docs 全迁移，smoke 15 + features 15 + 回归 7 全过 |
 | 1.3 | 2026-06-27 | 阶段 A 任务 A1 完成（`self.player` → `self.players: list[PlayerTank]`）：game/level.py 28 处 + Game.handle_events 1 处 + 4 个测试文件 55 处；smoke 15/15 + features 15/15 + 回归 7/7 + visual + gameplay 全过 |
+| 1.4 | 2026-06-27 | 阶段 A 任务 A2 完成（事件总线 `utils/events.py`）：6 个事件名常量 + 7 个 publish 触发点 + 新增 test_events.py 7 用例；5 套测试全过（events + smoke 15 + features 15 + 回归 7 + visual + gameplay） |
 
 ---
 
