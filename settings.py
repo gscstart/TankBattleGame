@@ -8,29 +8,27 @@ SCREEN_H = 624
 # 地图区域（顶部留 HUD）
 HUD_H = 60
 MAP_Y = HUD_H
-MAP_W = 624
-MAP_H = 564  # 地图区域高度 13 行 * 48 = 624 中减掉小余量
-# 实际网格
-TILE = 48
-GRID_W = 13
-GRID_H = 13
+# 实际网格：17×17（决策 #5 方案 C，见 docs/06-feature-roadmap.md §11）
+TILE = 36
+GRID_W = 17
+GRID_H = 17
 # 地图像素区域
-MAP_PIXEL_W = GRID_W * TILE  # 624
-MAP_PIXEL_H = GRID_H * TILE  # 624
+MAP_PIXEL_W = GRID_W * TILE  # 17 * 36 = 612
+MAP_PIXEL_H = GRID_H * TILE  # 17 * 36 = 612
 # 重新计算屏幕高度
-SCREEN_H = HUD_H + MAP_PIXEL_H  # 60 + 624 = 684
+SCREEN_H = HUD_H + MAP_PIXEL_H  # 60 + 612 = 672
 
 # 地图绘制水平居中
-MAP_X = (SCREEN_W - MAP_PIXEL_W) // 2  # (832 - 624) / 2 = 104
+MAP_X = (SCREEN_W - MAP_PIXEL_W) // 2  # (832 - 612) / 2 = 110
 
-# 坦克
-TANK_SIZE = 48  # 单个瓦片大小 = 坦克大小（坦克正好 1 瓦片，方便）
+# 坦克（= 1 个瓦片，方便整格碰撞）
+TANK_SIZE = 36  # 单个瓦片大小 = 坦克大小
 TANK_SPEED = 96  # 像素/秒
 PLAYER_SPEED = 120
 ENEMY_SPEED = 72
 
-# 子弹
-BULLET_SIZE = 10
+# 子弹（等比缩：原 10/48 → 36 缩放 ≈ 8）
+BULLET_SIZE = 8
 BULLET_SPEED = 320  # 像素/秒
 PLAYER_FIRE_COOLDOWN = 0.45  # 秒
 ENEMY_FIRE_COOLDOWN_MIN = 0.8
@@ -47,15 +45,15 @@ ENEMIES_PER_LEVEL = 15
 MAX_ENEMIES_ON_SCREEN = 3
 ENEMY_SPAWN_INTERVAL = 2.0  # 秒，敌人间隔
 
-# 敌人生成点（地图顶部 3 个固定位置）
-ENEMY_SPAWN_X = [TILE * 0, TILE * 6, TILE * 12]
+# 敌人生成点（地图顶部 3 个固定位置：左 / 中 / 右）
+ENEMY_SPAWN_X = [TILE * 0, TILE * (GRID_W // 2), TILE * (GRID_W - 1)]
 ENEMY_SPAWN_Y = TILE * 0
 
-# 玩家出生点
-PLAYER_SPAWN = (TILE * 6, TILE * 12)
+# 玩家出生点（底部中央列，基地上方一行）
+PLAYER_SPAWN = (TILE * (GRID_W // 2), TILE * (GRID_H - 2))
 
 # 基地位置（地图底部中央）
-BASE_GRID = (6, 12)  # (col, row)
+BASE_GRID = (GRID_W // 2, GRID_H - 1)  # (col, row)
 
 # 状态
 class State:

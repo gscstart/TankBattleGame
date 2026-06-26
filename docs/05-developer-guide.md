@@ -203,7 +203,7 @@ python tools/gen_sounds.py
 | 改 `_spawn_enemy` 不跳过 `e.dead` | 尸体挡出生点 | 必有 `if e.dead: continue` |
 | 改 `_on_base_hit` 不震屏 | 基地被毁无反馈 | 设 `screen_shake_time = 0.3` |
 | 加新瓦片不改 4 个 `blocks_xxx` 属性 | AI 穿墙/撞墙错乱 | 4 个属性全设 |
-| 加新关卡长度不是 13×13 | 渲染错位 + 测试 fail | 用 `"." * 13` 模板构造 |
+| 加新关卡长度不是 17×17（`GRID_W`×`GRID_H`） | 渲染错位 + 测试 fail | 用 `"." * GRID_W` 模板构造 |
 | 改 `LEVEL_DIFFICULTY` 长度小于 `len(LEVELS)` | 越界 IndexError | 保证 `len(LEVEL_DIFFICULTY) >= len(LEVELS)` |
 | 改 `Key.press_time` 默认值 -1.0 | 旧测试无法触发方向 | 默认 0.0（已修） |
 | 改 `Bullet.update` 不用子步 | 高速穿透薄墙 | 必须子步 |
@@ -341,7 +341,7 @@ level.powerups.append(PowerUp(player.rect.x, player.rect.y, "grenade"))
 - [ ] 没回退已修复 Bug（参考第 3 节）
 - [ ] 没引入新 magic number（移到 `settings.py`）
 - [ ] 新增的可视元素走 `utils/draw.py`
-- [ ] 新增的关卡长度 = 13×13
+- [ ] 新增的关卡长度 = 17×17（`GRID_W` × `GRID_H`）
 - [ ] 新增的瓦片设置 4 个 `blocks_xxx` 属性
 - [ ] 新增的音效失败有 try/except 兜底
 - [ ] 改 AI / 玩家逻辑时检查敌人 `born_invuln` / 玩家 `flashing_time` 守护

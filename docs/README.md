@@ -40,7 +40,7 @@ TankBattleGame/
 │   └── base.py              # 基地（重导出 TileBase）
 ├── world/                   # 地图系统
 │   ├── tile.py              # 7 种瓦片（空/砖/钢/草/水/冰/基地）
-│   ├── tilemap.py           # 13×13 网格 + 碰撞查询
+│   ├── tilemap.py           # 17×17 网格 + 碰撞查询
 │   └── levels.py            # 6 个关卡数据
 ├── game/                    # 游戏控制
 │   ├── game.py              # 状态机 + 主循环
@@ -75,7 +75,7 @@ python tests/test_features.py  # 跑功能测试
 ## 给后续 AI 的建议
 
 1. **改 entity 行为前**：先看 `02-entities.md` 了解状态字段（很多 bug 都源于改一处忘另一处）。
-2. **改关卡前**：先看 `03-game-loop.md` 的"关卡数据格式"小节（13×13 字符串网格）。
+2. **改关卡前**：先看 `03-game-loop.md` 的"关卡数据格式"小节（17×17 字符串网格）。
 3. **修复 bug 前**：先看 `05-developer-guide.md` 的"已修复 Bug 历史"（不要重复踩坑）。
 4. **新增功能时**：参考"扩展点"小节（已设计好的挂钩点）。
 5. **常量调整**：所有可调参数在 `settings.py`，详见 `04-api-reference.md` 的 settings 章节。

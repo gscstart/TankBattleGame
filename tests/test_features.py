@@ -54,9 +54,9 @@ def get_font(size, bold=False):
 print("\n=== Test 1: Level data integrity ===")
 check(get_total_levels() == 6, f"6 levels, got {get_total_levels()}")
 for i, lvl in enumerate(LEVELS):
-    check(len(lvl) == 13, f"level {i+1}: 13 rows, got {len(lvl)}")
+    check(len(lvl) == GRID_H, f"level {i+1}: {GRID_H} rows, got {len(lvl)}")
     for r, row in enumerate(lvl):
-        check(len(row) == 13, f"level {i+1} row {r}: 13 cols, got {len(row)}: {row!r}")
+        check(len(row) == GRID_W, f"level {i+1} row {r}: {GRID_W} cols, got {len(row)}: {row!r}")
     # 至少 1 个基地
     has_base = any("X" in row for row in lvl)
     check(has_base, f"level {i+1}: has base 'X'")
@@ -132,36 +132,40 @@ check(not e0.frozen, "frozen field exists and defaults to False")
 
 # ---- 5. 子弹破钢墙 ----
 print("\n=== Test 5: Bullet breaks steel ===")
-# 空地关卡，col=6, row=5 放钢墙
-layout = ["." * 13 for _ in range(13)]
-layout[5] = "." * 6 + "S" + "." * 6
+# 空地关卡，col=mid, row=5 放钢墙（mid 随 GRID_W 自适应）
+_mid = GRID_W // 2
+def _empty_with_tile(row, col, ch):
+    lay = ["." * GRID_W for _ in range(GRID_H)]
+    lay[row] = lay[row][:col] + ch + lay[row][col+1:]
+    return lay
+layout = _empty_with_tile(5, _mid, "S")
 tilemap = TileMap.from_layout(layout)
 # 不能破的子弹
-b_normal = Bullet(MAP_X + 6 * TILE, MAP_Y + 5 * TILE + TILE, Dir.UP, "player")
+b_normal = Bullet(MAP_X + _mid * TILE, MAP_Y + 5 * TILE + TILE, Dir.UP, "player")
 for _ in range(int(FPS * 0.5)):
     b_normal.update(1/60, tilemap, [b_normal], [], lambda t: None)
     if b_normal.dead: break
 check(b_normal.dead, "normal bullet consumed by steel")
-check(isinstance(tilemap.tiles[5][6], TileSteel), "steel intact after normal bullet")
+check(isinstance(tilemap.tiles[5][_mid], TileSteel), "steel intact after normal bullet")
 
 # 能破的子弹（直接设 can_break_steel）
-b_strong = Bullet(MAP_X + 6 * TILE, MAP_Y + 5 * TILE + TILE, Dir.UP, "player")
+b_strong = Bullet(MAP_X + _mid * TILE, MAP_Y + 5 * TILE + TILE, Dir.UP, "player")
 b_strong.can_break_steel = True
 for _ in range(int(FPS * 0.5)):
     b_strong.update(1/60, tilemap, [b_strong], [], lambda t: None)
     if b_strong.dead: break
 check(b_strong.dead, "strong bullet consumed")
-check(not isinstance(tilemap.tiles[5][6], TileSteel), "steel destroyed by strong bullet")
+check(not isinstance(tilemap.tiles[5][_mid], TileSteel), "steel destroyed by strong bullet")
 
 # 玩家升级到 2 级后子弹能破钢墙
 tilemap2 = TileMap.from_layout(layout)
-p = PlayerTank(MAP_X + 6*TILE, MAP_Y + 7*TILE)
+p = PlayerTank(MAP_X + _mid*TILE, MAP_Y + 7*TILE)
 p.upgrade_level = 2
 p_bullets = []
 p.shoot(p_bullets)  # 玩家开火，upgrade_level=2 应让 can_break_steel=True
 check(p_bullets[-1].can_break_steel, "player level 2 bullet can_break_steel = True")
 # 玩家升级 0 级时不能破
-p0 = PlayerTank(MAP_X + 6*TILE, MAP_Y + 7*TILE)
+p0 = PlayerTank(MAP_X + _mid*TILE, MAP_Y + 7*TILE)
 p0_bullets = []
 p0.shoot(p0_bullets)
 check(not p0_bullets[-1].can_break_steel, "player level 0 bullet cannot break steel")
@@ -170,23 +174,24 @@ check(not p0_bullets[-1].can_break_steel, "player level 0 bullet cannot break st
 # ---- 6. line_of_sight 公共函数 ----
 print("\n=== Test 6: line_of_sight() ===")
 # 空旷关卡
-layout = ["." * 13 for _ in range(13)]
+layout = ["." * GRID_W for _ in range(GRID_H)]
 tilemap = TileMap.from_layout(layout)
-# 在地图区域内取点（col=6, col=2 沿垂直线）
-check(line_of_sight((MAP_X + 6*TILE + 24, MAP_Y + 0),
-                    (MAP_X + 6*TILE + 24, MAP_Y + 12*TILE),
+_m = GRID_W // 2  # 中列
+# 在地图区域内取点（沿垂直线）
+check(line_of_sight((MAP_X + _m*TILE + TILE//2, MAP_Y + 0),
+                    (MAP_X + _m*TILE + TILE//2, MAP_Y + (GRID_H-1)*TILE),
                     tilemap), "vertical sight clear")
-check(line_of_sight((MAP_X + 0, MAP_Y + 6*TILE + 24),
-                    (MAP_X + 12*TILE, MAP_Y + 6*TILE + 24),
+check(line_of_sight((MAP_X + 0, MAP_Y + _m*TILE + TILE//2),
+                    (MAP_X + (GRID_W-1)*TILE, MAP_Y + _m*TILE + TILE//2),
                     tilemap), "horizontal sight clear")
-check(not line_of_sight((MAP_X + 6*TILE, MAP_Y + 6*TILE),
-                        (MAP_X + 8*TILE, MAP_Y + 8*TILE),
+check(not line_of_sight((MAP_X + _m*TILE, MAP_Y + _m*TILE),
+                        (MAP_X + (_m+2)*TILE, MAP_Y + (_m+2)*TILE),
                         tilemap), "diagonal returns False")
 # 有砖块阻挡
-layout[5] = "." * 6 + "B" + "." * 6
+layout[5] = layout[5][:_m] + "B" + layout[5][_m+1:]
 tilemap = TileMap.from_layout(layout)
-check(not line_of_sight((MAP_X + 6*TILE + 24, MAP_Y + 0),
-                         (MAP_X + 6*TILE + 24, MAP_Y + 12*TILE),
+check(not line_of_sight((MAP_X + _m*TILE + TILE//2, MAP_Y + 0),
+                         (MAP_X + _m*TILE + TILE//2, MAP_Y + (GRID_H-1)*TILE),
                          tilemap), "brick blocks sight")
 
 
@@ -212,7 +217,7 @@ check(p.x > 0, f"Particle moves: x={p.x}")
 # ---- 8. 子弹拖尾 ----
 print("\n=== Test 8: Bullet trail ===")
 b = Bullet(100, 100, Dir.UP, "player")
-tilemap = TileMap.from_layout(["." * 13 for _ in range(13)])
+tilemap = TileMap.from_layout(["." * GRID_W for _ in range(GRID_H)])
 for _ in range(10):
     b.update(1/60, tilemap, [b], [], lambda t: None)
     if b.dead: break
@@ -382,12 +387,12 @@ for _ in range(5):
 score_final = grenade_lvl.score
 check(score_final - initial_score == 300, f"grenade awards 300 once (3 enemies * 100), got {score_final - initial_score}")
 
-# #4: 关卡自定义 E 出生点
+# #4: 关卡自定义 E 出生点（17×17：关 6 E 在 (0,1) 和 (16,1)）
 from world.levels import LEVEL_6
 from world.tilemap import TileMap
 tm6 = TileMap.from_layout(LEVEL_6)
 check((0, 1) in tm6.enemy_spawns, f"Level 6 has (0, 1) spawn: {tm6.enemy_spawns}")
-check((12, 1) in tm6.enemy_spawns, f"Level 6 has (12, 1) spawn: {tm6.enemy_spawns}")
+check((GRID_W - 1, 1) in tm6.enemy_spawns, f"Level 6 has ({GRID_W-1}, 1) spawn: {tm6.enemy_spawns}")
 check(len(tm6.enemy_spawns) == 2, f"Level 6 has 2 spawns: {tm6.enemy_spawns}")
 
 # #7: 尸体不挡 spawn
@@ -409,16 +414,17 @@ check(result is not None, f"spawn succeeds even with dead enemy at spawn point: 
 from world.tile import TileEmpty
 check(TileEmpty.__name__ == "TileEmpty", "TileEmpty is a real class")
 # 再触发钢墙破坏
-tm8 = TileMap.from_layout(["." * 13 for _ in range(13)])
-tm8.tiles[5][6] = TileSteel()
+_m8 = GRID_W // 2
+tm8 = TileMap.from_layout(["." * GRID_W for _ in range(GRID_H)])
+tm8.tiles[5][_m8] = TileSteel()
 from entities.bullet import Bullet
-b8 = Bullet(MAP_X + 6*TILE, MAP_Y + 6*TILE + TILE, Dir.UP, "player")
+b8 = Bullet(MAP_X + _m8*TILE, MAP_Y + 6*TILE + TILE, Dir.UP, "player")
 b8.can_break_steel = True
 for _ in range(int(FPS * 0.5)):
     b8.update(1/60, tm8, [b8], [], lambda t: None)
     if b8.dead: break
-check(isinstance(tm8.tiles[5][6], TileEmpty),
-      f"after steel-break, tile is real TileEmpty: {type(tm8.tiles[5][6]).__name__}")
+check(isinstance(tm8.tiles[5][_m8], TileEmpty),
+      f"after steel-break, tile is real TileEmpty: {type(tm8.tiles[5][_m8]).__name__}")
 
 # #9: 玩家冷却用 PLAYER_FIRE_COOLDOWN
 from settings import PLAYER_FIRE_COOLDOWN

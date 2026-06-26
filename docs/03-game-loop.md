@@ -338,7 +338,7 @@ arialunicodems                   # Windows Unicode
 
 ---
 
-## 5. `TileMap` — 13×13 瓦片地图
+## 5. `TileMap` — 17×17 瓦片地图
 
 **文件**：`world/tilemap.py`
 
@@ -346,7 +346,7 @@ arialunicodems                   # Windows Unicode
 
 | 字段 | 说明 |
 |------|------|
-| `tiles` | `list[list[Tile]]`，13 行 13 列 |
+| `tiles` | `list[list[Tile]]`，`GRID_W` 行 `GRID_H` 列（当前 17×17） |
 | `player_spawn` | `(col, row)` 玩家出生点（来自 'P'） |
 | `base_pos` | `(col, row)` 基地位置（来自 'X'） |
 | `base_tile` | `TileBase` 实例（`_find_base()` 找到） |
@@ -354,7 +354,7 @@ arialunicodems                   # Windows Unicode
 
 ### 5.2 `from_layout(layout, char_map=None)` 类方法
 
-输入 13 个字符串（每行 13 字符），输出 `TileMap`。
+输入 `GRID_H` 个字符串（每行 `GRID_W` 字符，当前 17×17），输出 `TileMap`。
 
 **字符 → 瓦片映射**：
 ```python
@@ -380,7 +380,7 @@ CHAR_TO_TILE = {
 | `grid_to_world(col, row)` | `(col, row)` | `(wx, wy)` 像素 |
 | `grid_to_pixel(col, row)` | `(col, row)` | `(px, py)` 屏幕像素 |
 
-`MAP_X = 104`, `MAP_Y = 60`, `TILE = 48`（来自 `settings.py`）。
+`MAP_X = 110`, `MAP_Y = 60`, `TILE = 36`（来自 `settings.py`，17×17 网格）。
 
 ### 5.4 碰撞查询
 
@@ -472,7 +472,7 @@ class TileBrick(Tile):
 
 ### 7.1 数据格式
 
-每个关卡是 `list[str]`，13 行 × 13 列（**必须严格 13×13，测试会检查**）。
+每个关卡是 `list[str]`，17 行 × 17 列（**必须严格 `GRID_W`×`GRID_H`，测试会检查**）。
 
 ```python
 LEVEL_1 = [

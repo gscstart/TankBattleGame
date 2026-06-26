@@ -79,7 +79,7 @@ TankBattleGame/
 │   └── draw.py              # 纯代码绘制
 ├── world/                   # 地图
 │   ├── tile.py              # 6 种瓦片类型
-│   ├── tilemap.py           # 13×13 瓦片地图
+│   ├── tilemap.py           # 17×17 瓦片地图
 │   └── levels.py            # 3 个关卡数据
 ├── entities/                # 实体
 │   ├── tank.py              # 坦克基类
@@ -123,12 +123,12 @@ python tests/test_gameplay.py
 
 ```python
 LEVEL_4 = [
-    ".............",  # 13 列
-    ".BB.BB.BB.BB.",  # B = 砖块, S = 钢墙
+    ".................",  # 17 列（见 settings.GRID_W）
+    ".................",
     ...
-    "....BBXBB....",  # X = 基地（必填）
-    "..BB.....BB..",
-    "..B...P...B..",  # P = 玩家出生
+    ".......BXB.......",  # X = 基地（必填）
+    ".......BBB.......",
+    "........P........",  # P = 玩家出生
     "..BB.....BB..",
 ]
 LEVELS.append(LEVEL_4)
@@ -186,7 +186,7 @@ while running:
 
 ### 方向吸附
 
-坦克在改变方向时，会在垂直于新方向的轴上自动吸附到 48 像素格点，允许通过窄道：
+坦克在改变方向时，会在垂直于新方向的轴上自动吸附到 36 像素格点，允许通过窄道：
 
 ```python
 def try_change_direction(self, new_dir, ...):

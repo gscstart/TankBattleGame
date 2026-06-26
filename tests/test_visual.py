@@ -10,7 +10,7 @@ import random
 pygame.init()
 pygame.font.init()
 
-from settings import SCREEN_W, SCREEN_H, FPS, TILE, MAP_X, MAP_Y, Dir
+from settings import SCREEN_W, SCREEN_H, FPS, TILE, MAP_X, MAP_Y, Dir, GRID_W, GRID_H
 from game.level import Level
 from entities.bullet import Bullet
 from entities.effects import MuzzleFlash, Explosion
@@ -20,10 +20,14 @@ from world.tilemap import TileMap
 
 
 def make_empty_level():
-    layout = ["." * 13 for _ in range(13)]
-    layout[12] = "." * 6 + "P" + "." * 6
-    layout[12] = layout[12][:6] + "X" + layout[12][7:]
-    layout[0] = "E" + "." * 2 + "E" + "." * 2 + "E" + "." * 6
+    layout = ["." * GRID_W for _ in range(GRID_H)]
+    _mid = GRID_W // 2
+    layout[GRID_H - 2] = layout[GRID_H - 2][:_mid] + "P" + layout[GRID_H - 2][_mid+1:]
+    layout[GRID_H - 2] = layout[GRID_H - 2][:_mid] + "X" + layout[GRID_H - 2][_mid+1:]
+    row0 = list("." * GRID_W)
+    for c in (0, _mid, GRID_W - 1):
+        row0[c] = "E"
+    layout[0] = "".join(row0)
     return layout
 
 
@@ -39,7 +43,7 @@ player_x = MAP_X + 6 * TILE
 player_y = MAP_Y + 6 * TILE
 # 画坦克（手动，因为是空测试）
 from utils.draw import draw_tank
-player_rect = pygame.Rect(player_x, player_y, 48, 48)
+player_rect = pygame.Rect(player_x, player_y, TILE, TILE)
 # 画几个 MuzzleFlash
 effects = []
 fx = MuzzleFlash(player_x + 24, player_y + 0, Dir.UP, (220, 200, 80))

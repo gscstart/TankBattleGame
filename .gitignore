@@ -23,6 +23,8 @@ Thumbs.db
 
 # === 测试产物 ===
 screenshot_*.png
+visual_*.png
+cn_*.png
 *.log
 
 # === AI 助手缓存（机器本地、环境相关，不入库）===

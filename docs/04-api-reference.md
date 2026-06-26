@@ -253,7 +253,7 @@ def draw_game_over(surface, score, victory=False, t=0.0) -> None
 ## 10. `world/levels.py` — 关卡数据
 
 ### `LEVELS: list[list[str]]`
-6 个关卡布局（13×13 字符串网格）。
+6 个关卡布局（17×17 字符串网格，见 `settings.GRID_W`/`GRID_H`）。
 
 ### `get_level(index) -> list[str]`
 循环取关卡布局。

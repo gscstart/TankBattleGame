@@ -37,17 +37,24 @@ def check(cond, msg):
 
 
 def make_empty_level():
-    """构建一个空旷的关卡（仅基地 + 玩家 + 3 个出生点），用于隔离测试。"""
+    """构建一个空旷的关卡（仅基地 + 玩家 + 3 个出生点），用于隔离测试。
+
+    随 GRID_W/GRID_H 自适应：玩家在底部中央 (col=mid, row=GRID_H-2)，
+    基地正下方 (row=GRID_H-1)，敌人在顶部左/中/右。
+    """
     layout = ["." * GRID_W for _ in range(GRID_H)]
-    # 玩家在底部 (col 6, row 12)
-    row = "." * 6 + "P" + "." * 6  # exactly 13 chars
-    assert len(row) == GRID_W, f"got {len(row)}: {row!r}"
-    layout[GRID_H - 1] = row
-    # 基地在底部中央 (col 6) - 替换 P
-    layout[GRID_H - 1] = layout[GRID_H - 1][:6] + "X" + layout[GRID_H - 1][7:]
-    assert len(layout[GRID_H - 1]) == GRID_W
-    # 3 个敌人在顶部 (col 0, 3, 6)
-    layout[0] = "E" + "." * 2 + "E" + "." * 2 + "E" + "." * 6
+    mid = GRID_W // 2
+    # 玩家在底部中央（基地上方一行）
+    layout[GRID_H - 2] = layout[GRID_H - 2][:mid] + "P" + layout[GRID_H - 2][mid + 1:]
+    # 基地在玩家正下方
+    layout[GRID_H - 1] = layout[GRID_H - 1][:mid] + "X" + layout[GRID_H - 1][mid + 1:]
+    assert len(layout[GRID_H - 1]) == GRID_W, f"row len {len(layout[GRID_H-1])}"
+    # 3 个敌人在顶部：左 / 中 / 右（与 tilemap 默认出生点一致）
+    e_cols = [0, mid, GRID_W - 1]
+    row0_chars = list("." * GRID_W)
+    for c in e_cols:
+        row0_chars[c] = "E"
+    layout[0] = "".join(row0_chars)
     assert len(layout[0]) == GRID_W, f"row 0 length {len(layout[0])}: {layout[0]!r}"
     return layout
 

@@ -1,4 +1,4 @@
-"""瓦片地图。13x13 网格。"""
+"""瓦片地图。网格尺寸由 settings.GRID_W / GRID_H 决定（当前 17×17）。"""
 from __future__ import annotations
 import pygame
 from settings import TILE, GRID_W, GRID_H, MAP_X, MAP_Y
@@ -19,11 +19,11 @@ CHAR_TO_TILE = {
 
 
 class TileMap:
-    """13x13 网格地图。"""
+    """网格地图（GRID_W × GRID_H）。"""
 
     def __init__(self, level_layout, player_spawn, base_pos, enemy_spawns):
         """
-        level_layout: list[list[Tile]]，13x13
+        level_layout: list[list[Tile]]，GRID_W × GRID_H
         player_spawn: (col, row)
         base_pos: (col, row)
         enemy_spawns: list[(col, row)]
@@ -42,8 +42,10 @@ class TileMap:
         if char_map is None:
             char_map = CHAR_TO_TILE
         grid = [[None] * GRID_W for _ in range(GRID_H)]
-        player_spawn = (6, 12)
-        base_pos = (6, 12)
+        # 默认值随网格尺寸变化（居中底部），见 settings.GRID_W/GRID_H
+        mid = GRID_W // 2
+        player_spawn = (mid, GRID_H - 2)
+        base_pos = (mid, GRID_H - 1)
         explicit_enemy_spawns = []  # 收集关卡中显式标 E 的位置
         for row, line in enumerate(layout):
             for col, ch in enumerate(line):
@@ -60,9 +62,9 @@ class TileMap:
                     grid[row][col] = TileBase()
                 else:
                     grid[row][col] = TileEmpty()
-        # 关卡没有标 E 时使用默认 3 个顶部出生点
+        # 关卡没有标 E 时使用默认 3 个顶部出生点（左/中/右）
         if not explicit_enemy_spawns:
-            explicit_enemy_spawns = [(0, 0), (6, 0), (12, 0)]
+            explicit_enemy_spawns = [(0, 0), (mid, 0), (GRID_W - 1, 0)]
         return cls(grid, player_spawn, base_pos, explicit_enemy_spawns[:3])
 
     def _find_base(self):

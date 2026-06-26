@@ -158,7 +158,7 @@ Game.draw()
 
 ### 6.1 软吸附（Soft Snap）
 
-坦克改变方向时不能瞬间跳到 48 像素格点（视觉突兀），而是在 ~50ms 内平滑移动：
+坦克改变方向时不能瞬间跳到 36 像素格点（视觉突兀），而是在 ~50ms 内平滑移动：
 
 ```python
 # entities/tank.py: Tank.try_change_direction
