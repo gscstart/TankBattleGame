@@ -22,7 +22,7 @@
 | `level_index` | `int` | 当前关卡（0-5） |
 | `score` | `int` | 累计分数 |
 | `lives` | `int` | 玩家生命 |
-| `events_buffer` | `list` | 预留（目前直接传给 level.player） |
+| `events_buffer` | `list` | 预留（目前 `Game.handle_events` 直接转发给 `level.players`） |
 | `menu_t` | `float` | 菜单时间（用于闪烁） |
 
 ### 1.2 状态机切换点

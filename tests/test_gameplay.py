@@ -24,16 +24,16 @@ total_frames = FPS * 5
 for i in range(total_frames):
     # 模拟按键（每 30 帧切换按键）
     if i % 30 < 15:
-        g.level.player.keys["up"] = True
-        g.level.player.keys["left"] = False
+        g.level.players[0].keys["up"] = True
+        g.level.players[0].keys["left"] = False
     else:
-        g.level.player.keys["up"] = False
-        g.level.player.keys["left"] = True
+        g.level.players[0].keys["up"] = False
+        g.level.players[0].keys["left"] = True
     # 每 20 帧射击
     if i % 20 == 0:
-        g.level.player.keys["fire"] = True
+        g.level.players[0].keys["fire"] = True
     else:
-        g.level.player.keys["fire"] = False
+        g.level.players[0].keys["fire"] = False
     # 偶尔按 P 暂停/恢复
     if i == 100:
         # 模拟 P 键（手动切到暂停）
@@ -50,7 +50,7 @@ pygame.image.save(g.screen, "screenshot_level1.png")
 print(f"Saved screenshot_level1.png ({SCREEN_W}x{SCREEN_H})")
 print(f"After 5s: score={g.score}, lives={g.lives}, enemies_left={g.level.enemies_to_spawn + len(g.level.enemies)}")
 print(f"  state={g.state}, level_index={g.level_index}")
-print(f"  player pos={g.level.player.rect.x}, {g.level.player.rect.y}, dir={g.level.player.dir}")
+print(f"  player pos={g.level.players[0].rect.x}, {g.level.players[0].rect.y}, dir={g.level.players[0].dir}")
 print(f"  bullets={len(g.level.bullets)}, enemies={len(g.level.enemies)}")
 
 # 截一张菜单图

@@ -64,8 +64,9 @@ class Game:
                     self.state = State.PAUSED
                     self.state_time = 0.0
                     return
-                if self.level and self.level.player:
-                    self.level.player.handle_event(event)
+                if self.level and self.level.players:
+                    for p in self.level.players:
+                        p.handle_event(event)
             elif self.state == State.PAUSED:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     self.state = State.PLAYING

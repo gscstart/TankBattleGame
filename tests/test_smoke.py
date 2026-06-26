@@ -63,8 +63,8 @@ def make_empty_level():
 print("\n=== Test 1: Level creation ===")
 level = Level(0, PLAYER_LIVES, 0)
 check(level.tilemap is not None, "tilemap created")
-check(level.player is not None, "player spawned")
-check(not level.player.dead, "player alive")
+check(level.players[0] is not None, "player spawned")
+check(not level.players[0].dead, "player alive")
 check(level.enemies_to_spawn == ENEMIES_PER_LEVEL, f"enemies to spawn = {ENEMIES_PER_LEVEL}")
 check(level.lives == PLAYER_LIVES, f"lives = {PLAYER_LIVES}")
 
@@ -94,16 +94,16 @@ check(True, "all menu screens drawn")
 # 5. 玩家移动 + 子弹
 print("\n=== Test 5: Player movement and shooting ===")
 level2 = Level(0, PLAYER_LIVES, 0)
-start_x, start_y = level2.player.rect.x, level2.player.rect.y
-level2.player.keys["up"] = True
-level2.player.update(0.1, level2.tilemap, [], level2.bullets)
-level2.player.keys["up"] = False
-check(level2.player.rect.y < start_y or level2.player.rect.y != start_y,
-      f"player moved up: {start_y} -> {level2.player.rect.y}")
-check(level2.player.dir == Dir.UP, f"player dir is UP")
+start_x, start_y = level2.players[0].rect.x, level2.players[0].rect.y
+level2.players[0].keys["up"] = True
+level2.players[0].update(0.1, level2.tilemap, [], level2.bullets)
+level2.players[0].keys["up"] = False
+check(level2.players[0].rect.y < start_y or level2.players[0].rect.y != start_y,
+      f"player moved up: {start_y} -> {level2.players[0].rect.y}")
+check(level2.players[0].dir == Dir.UP, f"player dir is UP")
 
-level2.player.keys["fire"] = True
-level2.player.update(0.1, level2.tilemap, [], level2.bullets)
+level2.players[0].keys["fire"] = True
+level2.players[0].update(0.1, level2.tilemap, [], level2.bullets)
 check(len(level2.bullets) >= 1, f"bullet created: {len(level2.bullets)} bullets")
 
 # 6. 碰撞检测（真实关卡中的砖块）
@@ -119,11 +119,11 @@ for r in range(GRID_H):
         break
 check(brick_pos is not None, f"found a brick at {brick_pos}")
 col, row = brick_pos
-level3.player.rect.x, level3.player.rect.y = level3.tilemap.grid_to_world(col, row)
-level3.player.rect.x -= TILE
-old_x = level3.player.rect.x
-moved = level3.player.try_move(0.1, TILE, 0, level3.tilemap, [])
-check(level3.player.rect.x == old_x or not moved, "player blocked by brick")
+level3.players[0].rect.x, level3.players[0].rect.y = level3.tilemap.grid_to_world(col, row)
+level3.players[0].rect.x -= TILE
+old_x = level3.players[0].rect.x
+moved = level3.players[0].try_move(0.1, TILE, 0, level3.tilemap, [])
+check(level3.players[0].rect.x == old_x or not moved, "player blocked by brick")
 
 # 7. 子弹打砖块 - 用空旷关卡，子弹从下方飞到上方命中砖块
 print("\n=== Test 7: Bullet destroys brick subcell (clear path) ===")
@@ -136,7 +136,7 @@ bx, by = tilemap.grid_to_world(6, 5)
 bullet = Bullet(bx, by + TILE, Dir.UP, "player")
 # 跑若干帧
 for _ in range(int(FPS * 0.5)):
-    bullet.update(1/60, tilemap, [bullet], [level.player] + [], lambda t: None)
+    bullet.update(1/60, tilemap, [bullet], [level.players[0]] + [], lambda t: None)
     if bullet.dead:
         break
 brick_tile = tilemap.tiles[5][6]
@@ -196,10 +196,10 @@ check(tilemap.base_tile.destroyed, f"base destroyed: {tilemap.base_tile.destroye
 # 11. 玩家重生
 print("\n=== Test 11: Player respawn ===")
 level8 = Level(0, PLAYER_LIVES, 0)
-level8.player.dead = True
+level8.players[0].dead = True
 level8._death_timer = 0.1
 level8.update(0.2)
-check(level8.player is not None and not level8.player.dead, "player respawned")
+check(level8.players[0] is not None and not level8.players[0].dead, "player respawned")
 check(level8.lives == PLAYER_LIVES - 1, f"lives decremented: {level8.lives}")
 
 # 12. 关卡切换

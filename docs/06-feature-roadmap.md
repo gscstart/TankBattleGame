@@ -96,7 +96,7 @@ GitHub 搜索 `battle+city+pygame` 共 23 个结果，按 star 排序前 5：
 
 | 痛点 | 位置 | 后果 |
 |------|------|------|
-| `self.player` 散落 28 处直接访问 | `game/level.py`（grep 计数） | 加 P2 时需全局替换 |
+| `self.player` 散落 28 处直接访问 | `game/level.py`（grep 计数） | ~~加 P2 时需全局替换~~ **A1 已完成（见 §6.1）** |
 | `Level.update()` 单函数约 200 行 | `game/level.py: update()` | 加新子系统会爆炸 |
 | 关卡数据硬编码字符串 | `world/levels.py` | 加关需改 4 处（文档 + dict） |
 | 排行榜 / 存档 / 成就 / 事件系统 | 不存在 | 长期粘性功能无基础 |
@@ -196,7 +196,7 @@ GitHub 搜索 `battle+city+pygame` 共 23 个结果，按 star 排序前 5：
 
 | 任务 | 收益 | 改动文件 |
 |------|------|----------|
-| **A1**: `self.player` → `self.players: list[PlayerTank]` refactor | 解锁 P2、成就、事件 | `game/level.py` 15 处 |
+| **A1**: `self.player` → `self.players: list[PlayerTank]` refactor | 解锁 P2、成就、事件 | `game/level.py` 15 处 ✅ **2026-06-27** |
 | **A2**: 事件总线（`utils/events.py`） | 解锁成就、回放、CI 钩子 | 新文件 + 替换 5 处直接调用 |
 | **A3**: `pytest` 框架 + GitHub Actions | 后续所有改动有保护网 | `tests/` 改写 + `.github/workflows/ci.yml` |
 | **A4**: 输入抽象层（`game/input.py`） | 解锁手柄、键位重映射 | 新文件 + `PlayerTank.handle_event` |
@@ -205,6 +205,7 @@ GitHub 搜索 `battle+city+pygame` 共 23 个结果，按 star 排序前 5：
 - 现有 22 项测试在 pytest 下全过
 - 1 玩家玩法行为不变
 - `self.player` 引用数从 28 降到 0（全部改 `self.players[i]` 或遍历）
+- **A1 实施说明**（2026-06-27）：`game/level.py` 28 处 `self.player` → `self.players[0]`（保留 `[0]` 索引保持 1 玩家行为完全不变）；2 处列表操作改用 `self.players` 整体（`other_tanks.extend(self.players)`、`self.players + self.enemies`）；`Game.handle_events` 改为 `for p in self.level.players: p.handle_event(event)`，P2 实施时不用再改这一处；测试文件 4 个共 55 处同步更新；文档同步：`docs/03` Game 字段表。
 
 ### 阶段 B — 可玩性提升（约 2-3 天）
 
@@ -362,6 +363,7 @@ B6 (i18n) ─────► C5 (成就国际化)
 | 1.0 | 2026-06-26 | 初版（基于 2026-06-26 调研） |
 | 1.1 | 2026-06-26 | 加入决策记录 v2：双人独立生命 / 生存作为关 7 / 程序化关卡 / 编辑器推迟；新增 §11 地图尺寸扩展分析 |
 | 1.2 | 2026-06-26 | 决策 #5 选 C（17×17/TILE=36）并实施：settings/levels/tilemap/tests/docs 全迁移，smoke 15 + features 15 + 回归 7 全过 |
+| 1.3 | 2026-06-27 | 阶段 A 任务 A1 完成（`self.player` → `self.players: list[PlayerTank]`）：game/level.py 28 处 + Game.handle_events 1 处 + 4 个测试文件 55 处；smoke 15/15 + features 15/15 + 回归 7/7 + visual + gameplay 全过 |
 
 ---
 

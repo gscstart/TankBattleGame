@@ -36,7 +36,7 @@ class Level:
         # 读取关卡难度配置
         self.config = get_level_difficulty(level_index)
         self.tilemap = TileMap.from_layout(get_level(level_index))
-        self.player = self._spawn_player()
+        self.players = [self._spawn_player()]
         self.bullets = []
         self.enemies = []
         self.effects = []
@@ -77,7 +77,7 @@ class Level:
                 if spawn_rect.colliderect(e.rect):
                     break
             else:
-                if not spawn_rect.colliderect(self.player.rect):
+                if not spawn_rect.colliderect(self.players[0].rect):
                     tier = (self.enemies_killed) % 3
                     enemy = EnemyTank(x, y, tier=tier,
                                       enemy_speed=self.config["enemy_speed"])
@@ -94,13 +94,13 @@ class Level:
         col, row = self.tilemap.player_spawn
         x, y = self.tilemap.grid_to_world(col, row)
         # 保留道具状态再重生
-        old = self.player
-        self.player = PlayerTank(x, y)
-        self.player.flashing_time = RESPAWN_INVULN
+        old = self.players[0]
+        self.players = [PlayerTank(x, y)]
+        self.players[0].flashing_time = RESPAWN_INVULN
         # 继承旧玩家的道具/状态
-        self.player.upgrade_level = old.upgrade_level
-        self.player.invincible = max(0.0, old.invincible - 1.0)  # 重生减 1s
-        self.player.frozen_enemies_timer = old.frozen_enemies_timer
+        self.players[0].upgrade_level = old.upgrade_level
+        self.players[0].invincible = max(0.0, old.invincible - 1.0)  # 重生减 1s
+        self.players[0].frozen_enemies_timer = old.frozen_enemies_timer
         # 恢复 shovel 状态
         self._restore_shovel()
 
@@ -131,12 +131,12 @@ class Level:
                 self._spawn_timer = self.config["spawn_interval"]
 
         # 玩家
-        if not self.player.dead:
+        if not self.players[0].dead:
             other_tanks = [e for e in self.enemies if not e.dead]
-            self.player.update(dt, self.tilemap, other_tanks, self.bullets,
+            self.players[0].update(dt, self.tilemap, other_tanks, self.bullets,
                                effects=self.effects)
         else:
-            self.player.update_cooldown(dt)
+            self.players[0].update_cooldown(dt)
             if not hasattr(self, "_death_timer"):
                 self._death_timer = 1.0
             self._death_timer -= dt
@@ -150,11 +150,11 @@ class Level:
                     del self._death_timer
 
         # 玩家道具状态计时
-        if not self.player.dead:
-            if self.player.invincible > 0:
-                self.player.invincible -= dt
-            if self.player.frozen_enemies_timer > 0:
-                self.player.frozen_enemies_timer -= dt
+        if not self.players[0].dead:
+            if self.players[0].invincible > 0:
+                self.players[0].invincible -= dt
+            if self.players[0].frozen_enemies_timer > 0:
+                self.players[0].frozen_enemies_timer -= dt
                 # 冻结所有敌人
                 for e in self.enemies:
                     e.frozen = True
@@ -164,8 +164,8 @@ class Level:
 
         # 敌人
         other_tanks = []
-        if not self.player.dead:
-            other_tanks.append(self.player)
+        if not self.players[0].dead:
+            other_tanks.extend(self.players)
         # 基地位置（用于 AI 瞄准）
         base_pos = None
         if self.tilemap.base_tile and not self.tilemap.base_tile.destroyed:
@@ -178,14 +178,14 @@ class Level:
         for e in self.enemies:
             if e.dead:
                 continue
-            e.update(dt, self.tilemap, other_tanks, self.bullets, self.player,
+            e.update(dt, self.tilemap, other_tanks, self.bullets, self.players[0],
                      effects=self.effects, base_pos=base_pos,
                      target_priority=priority)
 
         # 子弹
         for b in self.bullets:
             b.update(dt, self.tilemap, self.bullets,
-                     [self.player] + self.enemies,
+                     self.players + self.enemies,
                      self._on_base_hit, effects=self.effects)
 
         # 清理死亡
@@ -208,7 +208,7 @@ class Level:
         for pu in self.powerups:
             pu.update(dt)
             # 检测玩家拾取
-            if not self.player.dead and pu.rect.colliderect(self.player.rect):
+            if not self.players[0].dead and pu.rect.colliderect(self.players[0].rect):
                 self._apply_powerup(pu)
                 pu.dead = True
         self.powerups = [pu for pu in self.powerups if not pu.dead]
@@ -230,7 +230,7 @@ class Level:
         """道具效果分发。"""
         from entities.effects import MuzzleFlash
         from utils.sound import play
-        p = self.player
+        p = self.players[0]
         if pu.type == "star":
             # 升级（最多 2 级）
             p.upgrade_level = min(2, p.upgrade_level + 1)
@@ -319,8 +319,8 @@ class Level:
         self.tilemap.draw(surface)
         for e in self.enemies:
             e.draw(surface)
-        if not self.player.dead:
-            self.player.draw(surface)
+        if not self.players[0].dead:
+            self.players[0].draw(surface)
         for b in self.bullets:
             b.draw(surface)
         # 道具在实体之上、草丛之下
@@ -330,18 +330,18 @@ class Level:
         for fx in self.effects:
             fx.draw(surface)
         # 死亡重生提示
-        if self.player.dead and hasattr(self, "_death_timer"):
+        if self.players[0].dead and hasattr(self, "_death_timer"):
             from game.hud import get_font
             font = get_font(28, True)
             text = font.render("准备重生...", True, (255, 200, 80))
             surface.blit(text, (surface.get_width() // 2 - text.get_width() // 2,
                                 surface.get_height() // 2 + 30))
         # 玩家道具状态指示器
-        if not self.player.dead and self.player.invincible > 0:
+        if not self.players[0].dead and self.players[0].invincible > 0:
             from game.hud import get_font
             font = get_font(16, True)
-            t = f"无敌 {self.player.invincible:.1f}s"
+            t = f"无敌 {self.players[0].invincible:.1f}s"
             text = font.render(t, True, (200, 230, 255))
-            surface.blit(text, (self.player.rect.x - 10, self.player.rect.y - 22))
+            surface.blit(text, (self.players[0].rect.x - 10, self.players[0].rect.y - 22))
         # 草丛
         self.tilemap.draw_foreground(surface)

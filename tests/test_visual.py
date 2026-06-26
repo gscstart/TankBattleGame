@@ -64,8 +64,8 @@ print("  saved visual_muzzle_flash.png")
 print("Capturing bullet trail...")
 level = Level(0, 3, 0)
 # 立即让玩家朝上开火
-level.player.keys["up"] = True
-level.player.keys["fire"] = True
+level.players[0].keys["up"] = True
+level.players[0].keys["fire"] = True
 # 跑 10 帧让子弹飞起来
 for _ in range(10):
     level.update(1.0 / FPS)
@@ -101,15 +101,15 @@ random.seed(7)
 for i in range(int(FPS * 2)):
     # 移动 + 频繁开火
     if i % 20 < 8:
-        level3.player.keys["up"] = True
-        level3.player.keys["fire"] = True
+        level3.players[0].keys["up"] = True
+        level3.players[0].keys["fire"] = True
     elif i % 20 < 14:
-        level3.player.keys["left"] = True
-        level3.player.keys["fire"] = True
+        level3.players[0].keys["left"] = True
+        level3.players[0].keys["fire"] = True
     else:
-        level3.player.keys["up"] = False
-        level3.player.keys["left"] = False
-        level3.player.keys["fire"] = False
+        level3.players[0].keys["up"] = False
+        level3.players[0].keys["left"] = False
+        level3.players[0].keys["fire"] = False
     level3.update(1.0 / FPS)
 level3.draw(screen)
 draw_hud(screen, level3.lives, level3.score, level3.index, level3.enemies_to_spawn + len(level3.enemies))
@@ -121,29 +121,29 @@ print(f"  saved visual_full_scene.png (effects: {len(level3.effects)}, "
 print("Capturing tread animation...")
 level4 = Level(0, 3, 0)
 # 强制让玩家移动一段距离
-level4.player.snap_axis = None
+level4.players[0].snap_axis = None
 for i in range(20):
-    level4.player.keys["up"] = True
-    level4.player.update(1.0 / FPS, level4.tilemap, [], level4.bullets)
+    level4.players[0].keys["up"] = True
+    level4.players[0].update(1.0 / FPS, level4.tilemap, [], level4.bullets)
 level4.draw(screen)
 draw_hud(screen, 3, 0, 0, 15)
 pygame.image.save(screen, "visual_treads.png")
-print(f"  saved visual_treads.png (tread_phase: {level4.player.tread_phase:.1f})")
+print(f"  saved visual_treads.png (tread_phase: {level4.players[0].tread_phase:.1f})")
 
 # --- 图 6：方向变向的瞬间（软吸附）---
 print("Capturing mid-snap...")
 level5 = Level(0, 3, 0)
 # 把玩家放在非格点位置模拟变向
-level5.player.rect.x = MAP_X + 5 * TILE + 14  # 不在格点
-level5.player.dir = Dir.UP
+level5.players[0].rect.x = MAP_X + 5 * TILE + 14  # 不在格点
+level5.players[0].dir = Dir.UP
 # 触发变向到 RIGHT
-level5.player.try_change_direction(Dir.RIGHT, level5.tilemap, [])
+level5.players[0].try_change_direction(Dir.RIGHT, level5.tilemap, [])
 # 跑 1 帧看吸附过程
-level5.player.update_snap(0.02)  # 20ms
+level5.players[0].update_snap(0.02)  # 20ms
 # 此时 rect.x 应该介于起始和目标之间
-print(f"  snap_axis: {level5.player.snap_axis}, "
-      f"target: {level5.player.snap_target}, "
-      f"x: {level5.player.rect.x}")
+print(f"  snap_axis: {level5.players[0].snap_axis}, "
+      f"target: {level5.players[0].snap_target}, "
+      f"x: {level5.players[0].rect.x}")
 level5.draw(screen)
 draw_hud(screen, 3, 0, 0, 15)
 pygame.image.save(screen, "visual_snap_midway.png")

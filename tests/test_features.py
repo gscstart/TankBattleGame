@@ -354,17 +354,17 @@ check(shovel_lvl._shovel_backup is None, "shovel backup cleared after timer expi
 
 # #3: 重生保留道具状态
 respawn_lvl = Level(0, 3, 0)
-respawn_lvl.player.upgrade_level = 2
-respawn_lvl.player.invincible = 5.0
-respawn_lvl.player.frozen_enemies_timer = 6.0
-respawn_lvl.player.dead = True
+respawn_lvl.players[0].upgrade_level = 2
+respawn_lvl.players[0].invincible = 5.0
+respawn_lvl.players[0].frozen_enemies_timer = 6.0
+respawn_lvl.players[0].dead = True
 respawn_lvl._death_timer = 0.05
 respawn_lvl.update(0.1)
-check(respawn_lvl.player.upgrade_level == 2, f"upgrade_level preserved: {respawn_lvl.player.upgrade_level}")
-check(respawn_lvl.player.invincible > 0, f"invincible preserved: {respawn_lvl.player.invincible}")
+check(respawn_lvl.players[0].upgrade_level == 2, f"upgrade_level preserved: {respawn_lvl.players[0].upgrade_level}")
+check(respawn_lvl.players[0].invincible > 0, f"invincible preserved: {respawn_lvl.players[0].invincible}")
 # frozen_enemies_timer 在 update 中会正常递减（设计如此），0.1s 后应剩约 5.9s
-check(5.0 < respawn_lvl.player.frozen_enemies_timer <= 6.0,
-      f"frozen_enemies_timer preserved (5.x s after 0.1s): {respawn_lvl.player.frozen_enemies_timer}")
+check(5.0 < respawn_lvl.players[0].frozen_enemies_timer <= 6.0,
+      f"frozen_enemies_timer preserved (5.x s after 0.1s): {respawn_lvl.players[0].frozen_enemies_timer}")
 
 # #5: grenade 不双重计分
 from entities.enemy import EnemyTank
