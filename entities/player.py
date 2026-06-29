@@ -8,6 +8,7 @@
 import pygame
 from settings import Dir, PLAYER_SPEED, PLAYER_FIRE_COOLDOWN, RESPAWN_INVULN, TILE
 from entities.tank import Tank
+from game.input import P1_INPUT
 import utils.colors as C
 
 
@@ -16,9 +17,12 @@ class PlayerTank(Tank):
     FIRE_COOLDOWN = PLAYER_FIRE_COOLDOWN  # 0.45s
     SLIDE_DURATION = 0.10  # 松开方向键后惯性滑行时间
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, input_map=None):
         super().__init__(x, y, Dir.UP, C.PLAYER_COLOR, C.PLAYER_DARK)
         self.is_player = True  # 标记玩家身份
+        # 玩家键位映射 (A4: 同屏双人合作时, P1/P2 各持一份 InputMap,
+        # handle_event 用 is_mine 过滤事件, 1 玩家默认 P1_INPUT 兼容)
+        self.input_map = input_map if input_map is not None else P1_INPUT
         self.cooldown = 0.0
         self.flashing_time = 0.0
         # 道具状态
@@ -42,32 +46,25 @@ class PlayerTank(Tank):
         self._time = 0.0
 
     def handle_event(self, event):
-        """处理 KEYDOWN/KEYUP 事件。同时记录按下时间。"""
+        """处理 KEYDOWN/KEYUP 事件。同时记录按下时间。
+
+        A4 改造: 先用 input_map.is_mine 过滤, 自己的键才处理. 多个
+        PlayerTank 各自响应自己的键, 1 玩家默认 P1_INPUT 兼容旧版.
+        """
+        if not self.input_map.is_mine(event.key):
+            return
         if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_w, pygame.K_UP):
-                self.keys["up"] = True
-                self.key_press_time["up"] = self._time
-            elif event.key in (pygame.K_s, pygame.K_DOWN):
-                self.keys["down"] = True
-                self.key_press_time["down"] = self._time
-            elif event.key in (pygame.K_a, pygame.K_LEFT):
-                self.keys["left"] = True
-                self.key_press_time["left"] = self._time
-            elif event.key in (pygame.K_d, pygame.K_RIGHT):
-                self.keys["right"] = True
-                self.key_press_time["right"] = self._time
-            elif event.key in (pygame.K_SPACE, pygame.K_j):
+            direction = self.input_map.direction_for(event.key)
+            if direction is not None:
+                self.keys[direction] = True
+                self.key_press_time[direction] = self._time
+            elif self.input_map.is_fire(event.key):
                 self.keys["fire"] = True
         elif event.type == pygame.KEYUP:
-            if event.key in (pygame.K_w, pygame.K_UP):
-                self.keys["up"] = False
-            elif event.key in (pygame.K_s, pygame.K_DOWN):
-                self.keys["down"] = False
-            elif event.key in (pygame.K_a, pygame.K_LEFT):
-                self.keys["left"] = False
-            elif event.key in (pygame.K_d, pygame.K_RIGHT):
-                self.keys["right"] = False
-            elif event.key in (pygame.K_SPACE, pygame.K_j):
+            direction = self.input_map.direction_for(event.key)
+            if direction is not None:
+                self.keys[direction] = False
+            elif self.input_map.is_fire(event.key):
                 self.keys["fire"] = False
 
     def _active_direction(self):

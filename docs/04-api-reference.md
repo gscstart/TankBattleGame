@@ -402,6 +402,49 @@ def draw(self, surface) -> None
 
 ---
 
+## 13.5 `game/input.py` — 输入抽象层（v1.6 阶段 A4）
+
+把"玩家 → 键位"做成数据, 1 玩家时 `P1_INPUT` 兼容旧行为, 双打时 `P2_INPUT` 独立控制。
+
+### `class InputMap`
+
+```python
+class InputMap(player_id, *, up_keys=(), down_keys=(),
+               left_keys=(), right_keys=(), fire_keys=())
+```
+
+玩家 ID + 5 个动作的键位元组（每个动作可绑多个键 alias）。
+
+### 方法
+
+| 方法 | 说明 |
+|------|------|
+| `is_mine(key) -> bool` | 该 key 是否属于本玩家 (5 个键位集内) |
+| `direction_for(key) -> str \| None` | 把 key 翻译为 `"up"` / `"down"` / `"left"` / `"right"`, 不属于返回 None |
+| `is_fire(key) -> bool` | 该 key 是否在 fire 键位集 |
+
+### 全局常量
+
+| 常量 | 键位 |
+|------|------|
+| `P1_INPUT` | `up=(K_w, K_UP)`, `down=(K_s, K_DOWN)`, `left=(K_a, K_LEFT)`, `right=(K_d, K_RIGHT)`, `fire=(K_SPACE, K_j)` |
+| `P2_INPUT` | `up=(K_UP,)`, `down=(K_DOWN,)`, `left=(K_LEFT,)`, `right=(K_RIGHT,)`, `fire=(K_RETURN, K_RSHIFT)` |
+
+`P1_INPUT` 包含方向键 alias 保持 1 玩家兼容（A1 决策），`P2_INPUT` 不响应 WASD 防止冲突。
+
+### `PlayerTank.__init__` 新增参数
+
+```python
+PlayerTank(x, y, input_map=None)
+```
+
+- 不传 → `input_map=P1_INPUT`（兼容旧调用）
+- 双打时 `Game.start_game` 创建 P2 时传 `P2_INPUT`
+
+### `PlayerTank.handle_event` 行为
+
+`handle_event` 先用 `self.input_map.is_mine(event.key)` 过滤事件，**自己的键才处理**。同一事件传给多个 PlayerTank 时，各自按自己的 input_map 决定是否响应——A1 review 标记的"P2 共享 P1 键位"问题通过此抽象解决。
+
 ## 14. `entities/player.py` — 玩家
 
 ### `class PlayerTank(Tank)`

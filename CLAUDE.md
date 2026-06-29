@@ -50,7 +50,7 @@ pytest tests/ -v
 
 ## 提交前清单
 
-- [ ] `pytest tests/ -v` 通过 (59 tests, ~1.5s)
+- [ ] `pytest tests/ -v` 通过 (69 tests, ~1.5s)
 - [ ] 脚本式测试单独跑通 (`test_visual.py` / `test_gameplay.py` / `test_chinese_menu.py`)
 - [ ] 没回退已修 Bug
 - [ ] 没引入 magic number
