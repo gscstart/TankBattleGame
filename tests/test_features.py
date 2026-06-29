@@ -26,14 +26,6 @@ def _fake_event(type, key):
     return pygame.event.Event(type, {"key": key, "mod": 0, "unicode": "", "scancode": 0})
 
 
-# conftest 已初始化 pygame.display (session scope), 这里不需要再 set_mode
-# 但 set_mode 是 module-level (旧版本) 现在 fixture 化更安全
-@pytest.fixture(scope="module", autouse=True)
-def _pygame_display():
-    pygame.display.set_mode((SCREEN_W, SCREEN_H))
-    yield
-
-
 # ---- 1. 关卡数据完整性 ----
 def test_level_data_integrity():
     assert get_total_levels() == 6, f"6 levels, got {get_total_levels()}"

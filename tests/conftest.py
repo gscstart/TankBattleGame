@@ -21,8 +21,7 @@ def _dummy_sdl_env():
 def _pygame_init():
     """初始化 pygame 子系统, 创建 display surface, 测试结束清理."""
     import pygame
-    pygame.init()
-    pygame.font.init()
+    pygame.init()  # init 所有子系统 (含 font + mixer)
     try:
         pygame.mixer.init()
     except Exception:

@@ -48,8 +48,3 @@ jobs:
           python tests/test_chinese_menu.py && \
           python tests/test_gameplay.py && \
           python tests/test_visual.py
-
-      - name: Upload coverage on failure
-        if: failure()
-        # 不强求 coverage, 失败时只跑测试
-        run: echo "Tests failed - see logs above"

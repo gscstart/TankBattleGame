@@ -19,13 +19,15 @@
 
 ```bash
 python tests/test_smoke.py        # 冒烟测试（15 项）— 仍可单独跑
-python tests/test_features.py     # 功能 + 回归测试（22 项）— 仍可单独跑
-python tests/test_events.py       # 事件总线单测（7 项，零 pygame 依赖最快）— 仍可单独跑
+python tests/test_features.py     # 功能 + 回归测试（35 项）— 仍可单独跑
+python tests/test_events.py       # 事件总线单测（9 项）— 仍可单独跑
 # 推荐: pytest 一次性跑全部 (59 tests, ~1.5s)
 pytest tests/ -v
 # pytest 自动发现 test_*.py 中的 def test_xxx() 函数, 收集
 # 3 个脚本式测试 (test_visual, test_gameplay, test_chinese_menu)
 # 不被 pytest 收集, 需单独跑 (CI 中由 .github/workflows/ci.yml 触发)
+# 注: conftest.py 有 autouse session fixture 初始化 pygame,
+# 所以即使 test_events 也跑 pygame.init() (1.5s 内全部跑完)
 ```
 
 如果失败，先排查环境问题再继续。
