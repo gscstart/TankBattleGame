@@ -8,7 +8,7 @@
 """
 import random
 import pygame
-from settings import RESPAWN_INVULN, MAP_X, MAP_Y, TILE
+from settings import RESPAWN_INVULN, MAP_X, MAP_Y, TILE, SCORE_PER_ENEMY
 from world.tilemap import TileMap
 from world.levels import get_level, get_level_difficulty
 from entities.player import PlayerTank
@@ -90,8 +90,7 @@ class Level:
 
     def respawn_player(self):
         if self.lives <= 0:
-            events.publish(events.LEVEL_FAILED, reason="lives_zero")
-            self.failed = True
+            self._fail(events.REASON_LIVES_ZERO)
             return
         col, row = self.tilemap.player_spawn
         x, y = self.tilemap.grid_to_world(col, row)
@@ -106,9 +105,13 @@ class Level:
         # 恢复 shovel 状态
         self._restore_shovel()
 
-    def base_destroyed(self):
-        events.publish(events.LEVEL_FAILED, reason="base_destroyed")
+    def _fail(self, reason: str):
+        """统一失败入口: 同时发 LEVEL_FAILED 事件 + 设 self.failed 标志。"""
+        events.publish(events.LEVEL_FAILED, reason=reason)
         self.failed = True
+
+    def base_destroyed(self):
+        self._fail(events.REASON_BASE_DESTROYED)
 
     def update(self, dt: float):
         if self.completed or self.failed:
@@ -142,14 +145,18 @@ class Level:
             self.players[0].update_cooldown(dt)
             if not hasattr(self, "_death_timer"):
                 self._death_timer = 1.0
+                # 玩家死亡首帧 publish (供成就/回放订阅)
+                events.publish(events.ENTITY_KILLED, kind="player", owner="enemy",
+                               x=self.players[0].rect.centerx,
+                               y=self.players[0].rect.centery,
+                               score_delta=0)
             self._death_timer -= dt
             if self._death_timer <= 0:
                 self.lives -= 1
                 if self.lives > 0:
                     self.respawn_player()
                 else:
-                    events.publish(events.LEVEL_FAILED, reason="lives_zero")
-                    self.failed = True
+                    self._fail(events.REASON_LIVES_ZERO)
                 if hasattr(self, "_death_timer"):
                     del self._death_timer
 
@@ -200,10 +207,10 @@ class Level:
             for e in newly_dead_enemies:
                 # 道具击杀的敌人不计分（已在 _apply_powerup 中加过），但仍掉落道具
                 if not e.killed_by_powerup:
-                    self.score += 100
+                    self.score += SCORE_PER_ENEMY
                     self.enemies_killed += 1
                     events.publish(events.ENTITY_KILLED, kind="enemy", owner="player",
-                                   x=e.rect.centerx, y=e.rect.centery, score_delta=100)
+                                   x=e.rect.centerx, y=e.rect.centery, score_delta=SCORE_PER_ENEMY)
                 # 25% 概率掉落道具
                 if random.random() < 0.25:
                     from entities.powerup import spawn_random_powerup
@@ -229,8 +236,7 @@ class Level:
         # 基地
         if self.tilemap.base_tile and self.tilemap.base_tile.destroyed:
             events.publish(events.BASE_DESTROYED)
-            events.publish(events.LEVEL_FAILED, reason="base_destroyed")
-            self.failed = True
+            self._fail(events.REASON_BASE_DESTROYED)
 
         # 通关
         if self.enemies_to_spawn <= 0 and len(self.enemies) == 0 and not self.failed:
@@ -255,8 +261,10 @@ class Level:
                     e.hit_flash_time = 0.3
                     self.effects.append(MuzzleFlash(e.rect.centerx, e.rect.centery,
                                                     (0, 0), (255, 200, 100)))
+                    events.publish(events.ENTITY_KILLED, kind="enemy", owner="powerup",
+                                   x=e.rect.centerx, y=e.rect.centery, score_delta=SCORE_PER_ENEMY)
                     count += 1
-            self.score += count * 100
+            self.score += count * SCORE_PER_ENEMY
         elif pu.type == "helmet":
             # 10s 无敌
             p.invincible = 10.0

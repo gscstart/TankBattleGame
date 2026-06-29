@@ -197,9 +197,8 @@ GitHub 搜索 `battle+city+pygame` 共 23 个结果，按 star 排序前 5：
 
 | 任务 | 收益 | 改动文件 |
 |------|------|----------|
-| **A1**: `self.player` → `self.players: list[PlayerTank]` refactor | 解锁 P2、成就、事件 | `game/level.py` 15 处 ✅ **2026-06-27** |
+| **A1**: `self.player` → `self.players: list[PlayerTank]` refactor | 解锁 P2、成就、事件 | `game/level.py` 28 处 ✅ **2026-06-27** |
 | **A2**: 事件总线（`utils/events.py`） | 解锁成就、回放、CI 钩子 | 新文件 + 替换 5 处直接调用 ✅ **2026-06-27** |
-| **A2**: 事件总线（`utils/events.py`） | 解锁成就、回放、CI 钩子 | 新文件 + 替换 5 处直接调用 |
 | **A3**: `pytest` 框架 + GitHub Actions | 后续所有改动有保护网 | `tests/` 改写 + `.github/workflows/ci.yml` |
 | **A4**: 输入抽象层（`game/input.py`） | 解锁手柄、键位重映射 | 新文件 + `PlayerTank.handle_event` |
 

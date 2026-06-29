@@ -20,6 +20,7 @@
 ```bash
 python tests/test_smoke.py        # 冒烟测试（15 项）
 python tests/test_features.py     # 功能 + 回归测试（22 项）
+python tests/test_events.py       # 事件总线单测（7 项，零 pygame 依赖最快）
 ```
 
 如果失败，先排查环境问题再继续。
@@ -44,9 +45,10 @@ python tests/test_features.py     # 功能 + 回归测试（22 项）
 
 - [ ] `tests/test_smoke.py` 通过
 - [ ] `tests/test_features.py` 通过
+- [ ] `tests/test_events.py` 通过（如改了 `utils/events.py` 或 `game/level.py` 的 publish 触发点）
 - [ ] 没回退已修 Bug
 - [ ] 没引入 magic number
-- [ ] 新瓦片/道具/关卡都改了 4 个对应的 dict/列表
+- [ ] 新瓦片/道具/关卡/事件都改了对应的 dict/常量/触发点
 - [ ] 音效失败有 try/except
 
 ## 快速开始
