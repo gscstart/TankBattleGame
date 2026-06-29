@@ -114,24 +114,35 @@ class TileMap:
         return False
 
     def rect_hits_brick_subcell(self, rect: pygame.Rect):
-        """返回矩形覆盖的砖块子格列表 [(tile, col, row, sub_index), ...]。"""
+        """返回矩形覆盖的砖块子格列表 [(tile, col, row, sub_index), ...]。
+
+        枚举 rect 实际覆盖的所有子格（AABB 范围），而非只看 rect.left/top
+        单点所在的子格。否则半碎砖块场景下，子弹 rect 跨越死/活子格边界时
+        会漏掉"对面"的活子格，导致子弹穿透不命中（玩家从已死子格位置
+        开火打不到对侧活子格，无法清理剩余砖块）。
+        """
         hits = []
         left, top = self.world_to_grid(rect.left, rect.top)
         right, bottom = self.world_to_grid(rect.right - 1, rect.bottom - 1)
+        sub_size = TILE // 2
         for r in range(top, bottom + 1):
             for c in range(left, right + 1):
                 tile = self.get_tile(c, r)
-                if isinstance(tile, TileBrick) and tile.alive:
-                    # 计算子格索引
-                    local_x = rect.x - (MAP_X + c * TILE)
-                    local_y = rect.y - (MAP_Y + r * TILE)
-                    # 子格大小 24
-                    sub_size = TILE // 2
-                    sub_c = 0 if local_x < sub_size else 1
-                    sub_r = 0 if local_y < sub_size else 1
-                    sub_index = sub_r * 2 + sub_c
-                    if tile.subtl & (1 << sub_index):
-                        hits.append((tile, c, r, sub_index))
+                if not (isinstance(tile, TileBrick) and tile.alive):
+                    continue
+                # rect 相对砖块 (col, row) 左上角的局部像素
+                lx = rect.x - (MAP_X + c * TILE)
+                ly = rect.y - (MAP_Y + r * TILE)
+                # rect 覆盖的子格列范围 [c_start, c_end] (0=左, 1=右)
+                c_start = 0 if lx < sub_size else 1
+                c_end = 0 if lx + rect.width - 1 < sub_size else 1
+                r_start = 0 if ly < sub_size else 1
+                r_end = 0 if ly + rect.height - 1 < sub_size else 1
+                for sub_r in range(r_start, r_end + 1):
+                    for sub_c in range(c_start, c_end + 1):
+                        sub_index = sub_r * 2 + sub_c
+                        if tile.subtl & (1 << sub_index):
+                            hits.append((tile, c, r, sub_index))
         return hits
 
     def rect_hits_steel_or_base(self, rect: pygame.Rect):

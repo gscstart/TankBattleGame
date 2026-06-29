@@ -171,6 +171,52 @@ p0.shoot(p0_bullets)
 check(not p0_bullets[-1].can_break_steel, "player level 0 bullet cannot break steel")
 
 
+# ---- 5.5 砖块跨子格命中回归 (Bug: rect 跨子格边界时漏命中) ----
+print("\n=== Test 5.5: brick cross-subcell hit ===")
+_sub = TILE // 2  # 18 in 17×17, 24 in 13×13 (后者已被 17×17 替代)
+
+# 场景: 砖块 (col 5, row 5), 坦克在 col 5 row 6 朝上开火
+# 子弹 rect (304, 240, 8, 8) 跨过 sub 0/sub 1 列边界 (x=308)
+# subtl=0b0010 (只有 sub 1 活)
+# 修复前: sub_index=0 (rect.left/top 算 sub 0), sub 0 死, 不命中
+# 修复后: 枚举 sub 0+sub 1, 命中 sub 1
+_mid = MAP_X + 5 * TILE + TILE // 2  # 砖块中心 x
+_brick_y = MAP_Y + 5 * TILE
+# 把砖块放 (col 5, row 5)
+layout_5_5 = ["." * GRID_W for _ in range(GRID_H)]
+layout_5_5[5] = layout_5_5[5][:5] + "B" + layout_5_5[5][6:]
+tm_5_5 = TileMap.from_layout(layout_5_5)
+brick_5_5 = tm_5_5.tiles[5][5]
+brick_5_5.subtl = 0b0010  # 只有 sub 1 活
+# 子弹 rect 跨 sub 0/1 列: rect.x 在 x=304-311 跨 308
+# 起点在砖块顶边, rect.y = 240, rect 范围 y=240-248
+b_5_5 = Bullet(_mid, _brick_y + 4, Dir.UP, "player")  # 中心 (308, 244), rect 起步 (304, 240, 8, 8)
+for _ in range(int(FPS * 0.3)):
+    b_5_5.update(1/60, tm_5_5, [b_5_5], [], lambda t: None)
+    if b_5_5.dead: break
+check(brick_5_5.subtl == 0, f"sub 1 hit (cross-subcell), got {bin(brick_5_5.subtl)}")
+check(b_5_5.dead, "bullet dead after cross-subcell hit")
+
+# 场景 2: subtl=0b1000 (只有 sub 3 活), 子弹 rect 跨 sub 2/3 (y)
+# 子弹 rect y=270 起步, 覆盖 sub 2 行 (y=258-276) 和 sub 1 行 (y=240-258)? 不, y=270 在 sub 2 行
+# 实际: rect (304, 270, 8, 8) 范围 y=270-278, 跨 sub 2 行 (258-276) 的 270-276 和 sub 3 行 (276-294) 的 276-278
+# x=304-311 跨 sub 0/1 列 (308): 304-308 sub 0 列, 308-311 sub 1 列
+# 覆盖 sub 0 行 (240-258) 吗? y 240-258 < 270-278, **不覆盖**
+# 覆盖 sub 1 行 (240-258)? 同上, 不覆盖
+# 覆盖 sub 2 行 (258-276)? y 270-276 重叠
+# 覆盖 sub 3 行 (276-294)? y 276-278 重叠 (2px)
+# 子弹实际覆盖 sub 2 (左下, y 重叠 270-276 x 重叠 304-308) + sub 3 (右下, y 重叠 276-278 x 重叠 308-311)
+# 旧代码: sub_index=2 (sub 2, 死), 不命中
+# 新代码: 枚举 sub 2+3, 命中 sub 3
+brick_5_5.subtl = 0b1000  # 只有 sub 3 活
+b_5_5_2 = Bullet(_mid, _brick_y + 30, Dir.UP, "player")  # 中心 (308, 270)
+for _ in range(int(FPS * 0.3)):
+    b_5_5_2.update(1/60, tm_5_5, [b_5_5_2], [], lambda t: None)
+    if b_5_5_2.dead: break
+check(brick_5_5.subtl == 0, f"sub 3 hit (cross-subcell y), got {bin(brick_5_5.subtl)}")
+check(b_5_5_2.dead, "bullet dead after cross-subcell y hit")
+
+
 # ---- 6. line_of_sight 公共函数 ----
 print("\n=== Test 6: line_of_sight() ===")
 # 空旷关卡
