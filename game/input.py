@@ -50,13 +50,17 @@ class InputMap:
         return key in self.fire_keys
 
 
-# P1 默认: WASD + Space/J, 兼容方向键 (1 玩家行为不变, A1 决策)
+# P1 默认: WASD + Space/J (1 玩家行为)
+# 故意不 alias 方向键: A4 核心目标是 P1/P2 独立控制, 如果 P1 也响应
+# 方向键, 双打时按方向键 P1 和 P2 同时响应, 违背独立原则.
+# 1 玩家时只能 WASD 操作 (代价: 方向键不能用, 但物理上一个键同一时刻
+# 只被一个玩家按, 不影响单玩家手感; 双打时 W/A/S/D 和方向键/Enter 不冲突).
 P1_INPUT = InputMap(
     player_id=0,
-    up_keys=(pygame.K_w, pygame.K_UP),
-    down_keys=(pygame.K_s, pygame.K_DOWN),
-    left_keys=(pygame.K_a, pygame.K_LEFT),
-    right_keys=(pygame.K_d, pygame.K_RIGHT),
+    up_keys=(pygame.K_w,),
+    down_keys=(pygame.K_s,),
+    left_keys=(pygame.K_a,),
+    right_keys=(pygame.K_d,),
     fire_keys=(pygame.K_SPACE, pygame.K_j),
 )
 

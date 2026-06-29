@@ -96,7 +96,9 @@ class Level:
         x, y = self.tilemap.grid_to_world(col, row)
         # 保留道具状态再重生
         old = self.players[0]
-        self.players = [PlayerTank(x, y)]
+        # 保留 input_map (A4): C1 双打时 P2 重生不能用 P1_INPUT,
+        # 显式传 old.input_map 保持 P1/P2 身份
+        self.players = [PlayerTank(x, y, input_map=old.input_map)]
         self.players[0].flashing_time = RESPAWN_INVULN
         # 继承旧玩家的道具/状态
         self.players[0].upgrade_level = old.upgrade_level

@@ -21,7 +21,7 @@
 python tests/test_smoke.py        # 冒烟测试（15 项）— 仍可单独跑
 python tests/test_features.py     # 功能 + 回归测试（35 项）— 仍可单独跑
 python tests/test_events.py       # 事件总线单测（9 项）— 仍可单独跑
-# 推荐: pytest 一次性跑全部 (59 tests, ~1.5s)
+# 推荐: pytest 一次性跑全部 (69 tests, ~1.5s)
 pytest tests/ -v
 # pytest 自动发现 test_*.py 中的 def test_xxx() 函数, 收集
 # 3 个脚本式测试 (test_visual, test_gameplay, test_chinese_menu)
@@ -62,7 +62,7 @@ pytest tests/ -v
 ```bash
 pip install -r requirements.txt
 python main.py                 # 启动游戏
-pytest tests/ -v               # 跑测试 (59 tests)
+pytest tests/ -v               # 跑测试 (69 tests)
 ```
 
 ---

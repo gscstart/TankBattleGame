@@ -1,9 +1,9 @@
 """InputMap + PlayerTank 输入过滤单测 (pytest 风格, A4).
 
-零 pygame.display 依赖, 但仍需 pygame.init() (InputMap 用 pygame.K_*).
+pygame.init() 由 conftest._pygame_init (autouse session fixture) 提供,
+本测试不需单独 init.
 """
 import pygame
-pygame.init()
 
 from game.input import InputMap, P1_INPUT, P2_INPUT
 from entities.player import PlayerTank
@@ -73,18 +73,18 @@ def test_inputmap_is_fire():
 
 
 def test_p1_input_default():
-    """P1_INPUT 默认: WASD + 方向键 alias + Space/J (1 玩家兼容)."""
+    """P1_INPUT 默认: WASD + Space/J (A4 review 后不 alias 方向键, 1 玩家用 WASD)."""
     assert P1_INPUT.player_id == 0
     # WASD
     assert P1_INPUT.is_mine(pygame.K_w)
     assert P1_INPUT.is_mine(pygame.K_a)
     assert P1_INPUT.is_mine(pygame.K_s)
     assert P1_INPUT.is_mine(pygame.K_d)
-    # 方向键 alias (1 玩家兼容)
-    assert P1_INPUT.is_mine(pygame.K_UP)
-    assert P1_INPUT.is_mine(pygame.K_DOWN)
-    assert P1_INPUT.is_mine(pygame.K_LEFT)
-    assert P1_INPUT.is_mine(pygame.K_RIGHT)
+    # 方向键 不再 alias (A4 review: 防止 P1/P2 共享方向键双打冲突)
+    assert not P1_INPUT.is_mine(pygame.K_UP)
+    assert not P1_INPUT.is_mine(pygame.K_DOWN)
+    assert not P1_INPUT.is_mine(pygame.K_LEFT)
+    assert not P1_INPUT.is_mine(pygame.K_RIGHT)
     # fire
     assert P1_INPUT.is_mine(pygame.K_SPACE)
     assert P1_INPUT.is_mine(pygame.K_j)
@@ -114,14 +114,20 @@ def test_p2_input():
 
 
 def test_player_default_uses_p1():
-    """不传 input_map 时, PlayerTank 默认 P1_INPUT (兼容旧调用)."""
+    """不传 input_map 时, PlayerTank 默认 P1_INPUT (兼容旧调用).
+
+    A4 review 后 P1_INPUT 不 alias 方向键, 1 玩家必须用 WASD.
+    """
     p = PlayerTank(100, 100)
     assert p.input_map is P1_INPUT
     # 模拟按 K_w → keys["up"] = True
     p.handle_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_w, "mod": 0, "unicode": "", "scancode": 0}))
     assert p.keys["up"] is True
-    # 按 K_UP (方向键 alias) 也能响应
+    # 按 K_UP (P1 不响应, A4 review 修复)
     p.handle_event(pygame.event.Event(pygame.KEYUP, {"key": pygame.K_UP, "mod": 0, "unicode": "", "scancode": 0}))
+    assert p.keys["up"] is True, "P1 should NOT respond to K_UP (alias removed)"
+    # 按 K_w KEYUP → 释放
+    p.handle_event(pygame.event.Event(pygame.KEYUP, {"key": pygame.K_w, "mod": 0, "unicode": "", "scancode": 0}))
     assert p.keys["up"] is False
 
 
@@ -138,25 +144,27 @@ def test_player_p2_ignores_p1_keys():
 
 
 def test_p1_and_p2_independent():
-    """核心: P1 和 P2 同时按不同键, 各自响应 (Game.handle_events 遍历分发场景)."""
+    """核心: P1 和 P2 同时按不同键, 各自响应 (Game.handle_events 遍历分发场景).
+
+    强断言: K_w 只被 P1 接收 (P2 忽略), 验证 P1_INPUT/P2_INPUT 互不重叠.
+    """
     from game.input import P1_INPUT, P2_INPUT
     p1 = PlayerTank(100, 100, input_map=P1_INPUT)
     p2 = PlayerTank(400, 100, input_map=P2_INPUT)
     # 模拟 Game.handle_events: 把同一 KEYDOWN 分发给两个 player
-    # P1 按 K_w, P2 按 K_UP (同一时刻同一方向)
     ev_w = pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_w, "mod": 0, "unicode": "", "scancode": 0})
     ev_up = pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_UP, "mod": 0, "unicode": "", "scancode": 0})
+    # 关键: P1 和 P2 都收到 K_w, 但只有 P1 应响应
     p1.handle_event(ev_w)
-    p1.handle_event(ev_up)
-    p2.handle_event(ev_w)   # P2 收到 P1 的 K_w, 忽略
-    p2.handle_event(ev_up)   # P2 收到自己的 K_UP
-    # P1 收到 W 和 UP, 都接受
-    assert p1.keys["up"] is True
-    # P2 只收到 UP, K_w 被忽略
-    assert p2.keys["up"] is True  # K_UP 触发
-    # 验证 P2 没把 K_w 当成 fire 或其他 (key 状态对比)
-    # P2 keys["fire"] 必须是 False
-    assert p2.keys["fire"] is False
+    p2.handle_event(ev_w)   # P2 收到 P1 的 K_w, 必须忽略
+    assert p1.keys["up"] is True, "P1 should respond to K_w"
+    assert p2.keys["up"] is False, "P2 must NOT respond to P1's K_w (is_mine filter)"
+    assert p2.keys["fire"] is False, "P2 must not misclassify K_w as fire"
+    # K_UP 分发: P1 不响应 (P1_INPUT 无方向键 alias), P2 响应
+    p1.handle_event(ev_up)  # P1 收到, 但 P1_INPUT 不含 K_UP, 应忽略
+    p2.handle_event(ev_up)  # P2 响应
+    assert p1.keys["up"] is True, "P1 still up from K_w (K_UP ignored by P1)"
+    assert p2.keys["up"] is True, "P2 responds to K_UP"
 
 
 def test_player_direction_priority_with_inputmap():
