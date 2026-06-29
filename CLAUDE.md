@@ -18,9 +18,14 @@
 ## 第二步：跑测试确认环境
 
 ```bash
-python tests/test_smoke.py        # 冒烟测试（15 项）
-python tests/test_features.py     # 功能 + 回归测试（22 项）
-python tests/test_events.py       # 事件总线单测（7 项，零 pygame 依赖最快）
+python tests/test_smoke.py        # 冒烟测试（15 项）— 仍可单独跑
+python tests/test_features.py     # 功能 + 回归测试（22 项）— 仍可单独跑
+python tests/test_events.py       # 事件总线单测（7 项，零 pygame 依赖最快）— 仍可单独跑
+# 推荐: pytest 一次性跑全部 (59 tests, ~1.5s)
+pytest tests/ -v
+# pytest 自动发现 test_*.py 中的 def test_xxx() 函数, 收集
+# 3 个脚本式测试 (test_visual, test_gameplay, test_chinese_menu)
+# 不被 pytest 收集, 需单独跑 (CI 中由 .github/workflows/ci.yml 触发)
 ```
 
 如果失败，先排查环境问题再继续。
@@ -43,9 +48,8 @@ python tests/test_events.py       # 事件总线单测（7 项，零 pygame 依�
 
 ## 提交前清单
 
-- [ ] `tests/test_smoke.py` 通过
-- [ ] `tests/test_features.py` 通过
-- [ ] `tests/test_events.py` 通过（如改了 `utils/events.py` 或 `game/level.py` 的 publish 触发点）
+- [ ] `pytest tests/ -v` 通过 (59 tests, ~1.5s)
+- [ ] 脚本式测试单独跑通 (`test_visual.py` / `test_gameplay.py` / `test_chinese_menu.py`)
 - [ ] 没回退已修 Bug
 - [ ] 没引入 magic number
 - [ ] 新瓦片/道具/关卡/事件都改了对应的 dict/常量/触发点
@@ -56,7 +60,7 @@ python tests/test_events.py       # 事件总线单测（7 项，零 pygame 依�
 ```bash
 pip install -r requirements.txt
 python main.py                 # 启动游戏
-python tests/test_smoke.py     # 跑测试
+pytest tests/ -v               # 跑测试 (59 tests)
 ```
 
 ---
