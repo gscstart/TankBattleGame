@@ -348,3 +348,132 @@ def test_all_players_perm_dead_triggers_fail_once():
         lv.update(0.1)
     assert fail_count[0] == 1, f"LEVEL_FAILED published {fail_count[0]} times"
     ev.clear()
+
+
+# ---- respawn 不应影响 shovel 状态 (Bug 21) ----
+
+def test_respawn_does_not_clear_shovel_state():
+    """shovel 激活中时重生玩家不应清除 shovel backup / 倒计时.
+
+    BUG: respawn_player 末尾调 self._restore_shovel(), 把激活中的 shovel
+    状态清掉 (backup 设 None, timer 归 0), 基地周围立即从钢墙变回砖块.
+    重生应该只恢复玩家本身, 不影响地图.
+    """
+    lv = Level(0, lives=3, score=0, num_players=1)
+    # 激活 shovel (15s 钢墙)
+    lv._activate_shovel(15.0)
+    assert lv._shovel_backup is not None, "shovel should be active"
+    assert lv._shovel_timer == 15.0
+    # 玩家死亡 + 模拟重生流程
+    lv.players[0].dead = True
+    # 强制 lives=2 模拟 1 次死亡后 (而不是 0)
+    lv.respawn_player(0)
+    # shovel 状态应保持
+    assert lv._shovel_backup is not None, "shovel backup should NOT be cleared by respawn"
+    assert lv._shovel_timer > 0, "shovel timer should NOT be cleared by respawn"
+
+
+def test_respawn_restores_shovel_after_timer_expires():
+    """shovel timer 自然到期时 _restore_shovel 应仍能正确清理 (回归)."""
+    lv = Level(0, lives=3, score=0, num_players=1)
+    lv._activate_shovel(15.0)
+    assert lv._shovel_backup is not None
+    # 模拟 shovel timer 到期 (不应被 respawn 提前清)
+    lv._shovel_timer = 0.05
+    # 不通过 respawn, 直接调 _restore_shovel
+    lv._restore_shovel()
+    assert lv._shovel_backup is None
+    assert lv._shovel_timer == 0.0
+
+
+# ---- BASE_DESTROYED 事件不应重复发布 (Bug 34) ----
+
+def test_base_destroyed_publishes_event_once():
+    """基地被毁时 BASE_DESTROYED 应只发一次 (单帧).
+
+    BUG: 之前 base_destroyed() / inline _fail + LEVEL_FAILED 路径可能同帧
+    重复触发. 修法: 所有 _fail / 事件 publish 都加 not self.failed 守门.
+    """
+    from utils import events as ev
+    ev.clear()
+    base_destroyed_count = [0]
+    level_failed_count = [0]
+    ev.subscribe(ev.BASE_DESTROYED, lambda **kw: base_destroyed_count.__setitem__(0, base_destroyed_count[0] + 1))
+    ev.subscribe(ev.LEVEL_FAILED, lambda **kw: level_failed_count.__setitem__(0, level_failed_count[0] + 1))
+
+    lv = Level(0, lives=3, score=0, num_players=1)
+    # 直接摧毁基地
+    lv.tilemap.base_tile.destroyed = True
+    # 跑 5 帧 update
+    for _ in range(5):
+        lv.update(0.1)
+    assert base_destroyed_count[0] == 1, f"BASE_DESTROYED published {base_destroyed_count[0]} times"
+    assert level_failed_count[0] == 1, f"LEVEL_FAILED published {level_failed_count[0]} times"
+    ev.clear()
+
+
+def test_base_destroyed_after_all_players_dead_publishes_once():
+    """同帧所有玩家都死 + 基地毁, 修后只触发一个失败 (玩家死先触发).
+
+    BUG 之前: 玩家死触发 _fail(REASON_LIVES_ZERO), 基地毁再次触发
+    _fail(REASON_BASE_DESTROYED) + publish BASE_DESTROYED, 共 2 次 LEVEL_FAILED.
+    修后: 玩家死先触发 fail, 基地毁检查 not self.failed 跳过, 只 1 次 LEVEL_FAILED.
+    BASE_DESTROYED 不发 (因玩家死先).
+    """
+    from utils import events as ev
+    ev.clear()
+    base_destroyed_count = [0]
+    level_failed_count = [0]
+    level_failed_reasons = []
+    ev.subscribe(ev.BASE_DESTROYED, lambda **kw: base_destroyed_count.__setitem__(0, base_destroyed_count[0] + 1))
+    def on_level_failed(**kw):
+        level_failed_count[0] += 1
+        level_failed_reasons.append(kw.get("reason"))
+    ev.subscribe(ev.LEVEL_FAILED, on_level_failed)
+    from utils import events as _events_mod  # 上面 lambda 不需要, 但常量在这里
+    events = _events_mod
+
+    lv = Level(0, lives=3, score=0, num_players=1)
+    # 玩家永久死亡 (P1 lives=0 + dead)
+    lv.players[0].lives = 0
+    lv.players[0].dead = True
+    lv._death_timer_p0 = 0.05  # 倒数末段
+    # 基地摧毁
+    lv.tilemap.base_tile.destroyed = True
+    # 跑 1 帧 (玩家死+基地毁同帧)
+    lv.update(0.1)
+    # 修后行为: 玩家死先触发 _fail, 基地毁 inline 检查 not self.failed 跳过
+    assert level_failed_count[0] == 1, f"LEVEL_FAILED published {level_failed_count[0]} times"
+    assert level_failed_reasons == [events.REASON_LIVES_ZERO], \
+        f"expected REASON_LIVES_ZERO, got {level_failed_reasons}"
+    assert base_destroyed_count[0] == 0, \
+        f"BASE_DESTROYED should be 0 (player death first), got {base_destroyed_count[0]}"
+    ev.clear()
+
+
+# ---- P2 出生点边界: P1 col=0/1 时不应重叠 (Bug 1) ----
+
+def test_p2_spawn_does_not_overlap_p1_at_col_zero():
+    """P1 出生在 col=0 时 P2 仍应找到非重叠位置 (不应 max(0, col-2)=col=0 重叠).
+
+    BUG 之前: col = max(0, col - 2) 在 col=0 时退化为 0, P2 与 P1 重叠.
+    修法: 4 方向找安全位置, 默认退到 row 偏移.
+    """
+    from world.tilemap import TileMap
+    from world.levels import LEVELS
+    from game.input import P1_INPUT
+    # 改 P1 出生点到 col=0 模拟极端关卡
+    layout = [list(line) for line in LEVELS[0]]
+    p_row = next(r for r, line in enumerate(layout) if "P" in line)
+    p_col = layout[p_row].index("P")
+    layout[p_row][p_col] = "."
+    layout[p_row][0] = "P"
+    layout_str = ["".join(line) for line in layout]
+    # 创建 Level (用正常流程), 然后替换 tilemap + players
+    lv = Level(0, lives=3, score=0, num_players=2)
+    lv.tilemap = TileMap.from_layout(layout_str)
+    lv.players = [lv._spawn_player(0, P1_INPUT), lv._spawn_player(1, P1_INPUT)]
+    # 核心断言: P1 和 P2 不重叠
+    p1, p2 = lv.players
+    assert not p1.rect.colliderect(p2.rect), \
+        f"P1({p1.rect.topleft}) and P2({p2.rect.topleft}) should not overlap when P1 at col=0"

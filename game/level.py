@@ -49,11 +49,12 @@ class Level:
         self.mode = self.config.get("mode", "campaign")
         self.tilemap = TileMap.from_layout(get_level(level_index))
         # C1: 创建 num_players 个玩家, P1/P2 用各自 InputMap
+        # 用循环 (而不是 list comprehension) 因为 _spawn_player(1) 需要 self.players[0]
         input_maps = [P1_INPUT, P2_INPUT]
-        self.players = [
-            self._spawn_player(i, input_maps[i] if i < len(input_maps) else P1_INPUT)
-            for i in range(num_players)
-        ]
+        self.players = []
+        for i in range(num_players):
+            im = input_maps[i] if i < len(input_maps) else P1_INPUT
+            self.players.append(self._spawn_player(i, im))
         self.bullets = []
         self.enemies = []
         self.effects = []
@@ -75,12 +76,33 @@ class Level:
         self._shovel_backup = None
 
     def _spawn_player(self, index: int = 0, input_map=None):
-        """index: 0=P1 默认出生点, 1=P2 在 P1 左侧一格. input_map: 该玩家键位."""
+        """index: 0=P1 默认出生点, 1=P2 在 P1 旁边找不重叠位置. input_map: 该玩家键位.
+
+        P2 位置: 4 方向 (左/右/上/下) 尝试, 默认退到 (col, row+1) 下方.
+        极端 P1 在 col=0/GRID_W-1 时 '左侧' 越界时退化, 用其他方向.
+        """
         from game.input import P1_INPUT
+        from settings import GRID_W, GRID_H
         col, row = self.tilemap.player_spawn
         if index == 1:
-            # P2: 在 P1 左侧一格 (不与 P1 重叠)
-            col = max(0, col - 2)
+            # P2 找与 P0 不重叠的最近位置
+            p0 = self.players[0] if self.players else None
+            offsets = [(-2, 0), (2, 0), (0, -1), (0, 1), (-2, -1), (2, 1), (-2, 1), (2, -1)]
+            chosen = None
+            for dc, dr in offsets:
+                nc, nr = col + dc, row + dr
+                if not (0 <= nc < GRID_W and 0 <= nr < GRID_H):
+                    continue
+                # 检查是否与 P0 重叠
+                x_test, y_test = self.tilemap.grid_to_world(nc, nr)
+                test_rect = pygame.Rect(x_test, y_test, TILE, TILE)
+                if p0 is None or not test_rect.colliderect(p0.rect):
+                    chosen = (nc, nr)
+                    break
+            if chosen is None:
+                # 兜底: 直接在 P1 下方一格 (越界时夹到 grid 内)
+                chosen = (col, min(GRID_H - 1, row + 1))
+            col, row = chosen
         x, y = self.tilemap.grid_to_world(col, row)
         player = PlayerTank(x, y, input_map=input_map or P1_INPUT)
         player.flashing_time = RESPAWN_INVULN
@@ -160,8 +182,8 @@ class Level:
         self.players[index] = new_player
         # 同步 self.lives (汇总, 用于 HUD)
         self.lives = self.players[0].lives
-        # shovel 状态保留
-        self._restore_shovel()
+        # 注意: 不调 _restore_shovel() - 重生时 shovel 状态应保留
+        # (shovel 由 _shovel_timer 自然到期恢复, 不应被重生流程打断)
 
     def _fail(self, reason: str):
         """统一失败入口: 同时发 LEVEL_FAILED 事件 + 设 self.failed 标志。"""
@@ -318,8 +340,9 @@ class Level:
 
         # 基地
         if self.tilemap.base_tile and self.tilemap.base_tile.destroyed:
-            events.publish(events.BASE_DESTROYED)
-            self._fail(events.REASON_BASE_DESTROYED)
+            if not self.failed:
+                events.publish(events.BASE_DESTROYED)
+                self._fail(events.REASON_BASE_DESTROYED)
 
         # 通关
         if self.enemies_to_spawn <= 0 and len(self.enemies) == 0 and not self.failed:
