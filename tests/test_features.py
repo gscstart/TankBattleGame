@@ -28,12 +28,15 @@ def _fake_event(type, key):
 
 # ---- 1. 关卡数据完整性 ----
 def test_level_data_integrity():
-    assert get_total_levels() == 6, f"6 levels, got {get_total_levels()}"
+    # B3: 现在 7 关 (6 关 campaign + 关 7 survival)
+    assert get_total_levels() == 7, f"7 levels, got {get_total_levels()}"
     for i, lvl in enumerate(LEVELS):
         assert len(lvl) == GRID_H, f"level {i+1}: {GRID_H} rows, got {len(lvl)}"
         for r, row in enumerate(lvl):
             assert len(row) == GRID_W, f"level {i+1} row {r}: {GRID_W} cols, got {len(row)}: {row!r}"
-        assert any("X" in row for row in lvl), f"level {i+1}: has base 'X'"
+        # 关 7 是 survival 模式，没有基地 (B3)
+        if i < 6:
+            assert any("X" in row for row in lvl), f"level {i+1}: has base 'X'"
         assert any("P" in row for row in lvl), f"level {i+1}: has player 'P'"
         tm = TileMap.from_layout(lvl)
         assert len(tm.enemy_spawns) >= 2, f"level {i+1}: >=2 enemy spawns, got {len(tm.enemy_spawns)}"
@@ -41,8 +44,10 @@ def test_level_data_integrity():
 
 # ---- 2. 难度递增 ----
 def test_difficulty_progression():
-    assert len(LEVEL_DIFFICULTY) == 6, "6 difficulty levels"
-    for i in range(1, len(LEVEL_DIFFICULTY)):
+    # B3: 现在 7 关 (6 关 campaign + 关 7 survival, survival 不参与递增)
+    assert len(LEVEL_DIFFICULTY) == 7, f"7 difficulty levels, got {len(LEVEL_DIFFICULTY)}"
+    # 只对 campaign 6 关检查 enemy_count 递增
+    for i in range(1, 6):
         prev = LEVEL_DIFFICULTY[i - 1]
         cur = LEVEL_DIFFICULTY[i]
         assert cur["enemy_count"] >= prev["enemy_count"], \
@@ -50,6 +55,9 @@ def test_difficulty_progression():
         if i >= 3:
             assert cur["enemy_speed"] > prev["enemy_speed"], \
                 f"level {i+1} enemy_speed > previous: {cur['enemy_speed']} > {prev['enemy_speed']}"
+    # survival 关 enemy_speed 应 >= 关 6 campaign
+    assert LEVEL_DIFFICULTY[6]["enemy_speed"] >= LEVEL_DIFFICULTY[5]["enemy_speed"], \
+        "survival should be at least as fast as final campaign"
 
 
 # ---- 3. 道具系统 ----

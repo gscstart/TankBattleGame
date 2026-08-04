@@ -89,10 +89,11 @@ POWERUP_CARRIER_COLOR = (255, 60, 60)  # 鲜红，区别于 tier 颜色
 POWERUP_CARRIER_FLASH_PERIOD = 0.10  # 闪烁周期（秒），值越小越快
 
 # 关卡难度配置（按 index 索引，越界循环）
-# enemy_count: 该关总敌人数
+# enemy_count: 该关总敌人数（survival 模式无此字段）
 # max_on_screen: 同屏最多敌人数
 # enemy_speed: 敌人速度
 # spawn_interval: 敌人生成间隔（秒）
+# mode: 'campaign' (默认) 或 'survival'（无尽波次）
 LEVEL_DIFFICULTY = [
     {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72,  "spawn_interval": 2.0},  # 关 1
     {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72,  "spawn_interval": 2.0},  # 关 2
@@ -100,4 +101,5 @@ LEVEL_DIFFICULTY = [
     {"enemy_count": 18, "max_on_screen": 4, "enemy_speed": 78,  "spawn_interval": 1.8},  # 关 4
     {"enemy_count": 20, "max_on_screen": 4, "enemy_speed": 84,  "spawn_interval": 1.5},  # 关 5
     {"enemy_count": 25, "max_on_screen": 5, "enemy_speed": 90,  "spawn_interval": 1.2},  # 关 6
+    {"mode": "survival", "max_on_screen": 5, "enemy_speed": 96,  "spawn_interval": 0.8},  # 关 7 生存模式
 ]

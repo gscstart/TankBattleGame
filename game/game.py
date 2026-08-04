@@ -103,6 +103,7 @@ class Game:
 
     def next_level(self):
         self.level_index += 1
+        # 走完所有关卡（包括关 7 生存）才 VICTORY
         if self.level_index >= len(LEVELS):
             self.state = State.VICTORY
             self.state_time = 0.0
@@ -115,10 +116,15 @@ class Game:
         self.state_time = 0.0
 
     def _record_highscore(self):
-        """通关时尝试把分数写入排行榜。失败兜底（I/O 错误不阻塞游戏）。"""
+        """通关 / 生存失败时尝试把分数写入排行榜。失败兜底。"""
         try:
+            # 1-based 关卡号：刚通关 / 失败那一关
+            level_no = (self.level.index + 1) if self.level else self.level_index
+            # 显式传 path=highscores.DEFAULT_PATH 而非用 add_score 的默认值,
+            # 因为默认值在 import 时绑定, monkeypatch 改模块属性不会生效
             rank, _ = highscores.add_score(
-                self.score, len(LEVELS), name="YOU"
+                self.score, level_no, name="YOU",
+                path=highscores.DEFAULT_PATH,
             )
             self.highscore_rank = rank
         except OSError:
@@ -144,6 +150,9 @@ class Game:
                 elif self.level.failed:
                     self.state = State.GAME_OVER
                     self.state_time = 0.0
+                    # 生存模式失败也写榜 (B3: 接入 B2 排行榜)
+                    if self.level.mode == "survival":
+                        self._record_highscore()
         elif self.state == State.LEVEL_COMPLETE:
             # 2 秒后进入下一关
             if self.state_time >= 2.0:
@@ -177,6 +186,16 @@ class Game:
                                     self.state_time)
             elif self.state == State.GAME_OVER:
                 draw_game_over(self.screen, self.score, victory=False, t=self.menu_t)
+                # survival 模式上榜提示
+                if (self.level and self.level.mode == "survival"
+                        and self.highscore_rank >= 0):
+                    hs_text = get_font(20).render(
+                        f"生存得分上榜！第 {self.highscore_rank + 1} 名  -  H 键查看",
+                        True, (255, 220, 100)
+                    )
+                    self.screen.blit(hs_text,
+                                     (SCREEN_W // 2 - hs_text.get_width() // 2,
+                                      SCREEN_H // 2 + 110))
             elif self.state == State.VICTORY:
                 draw_game_over(self.screen, self.score, victory=True, t=self.menu_t)
                 # 上榜提示

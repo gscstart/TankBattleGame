@@ -36,6 +36,8 @@ class Level:
         self.score = score
         # 读取关卡难度配置
         self.config = get_level_difficulty(level_index)
+        # 模式：'campaign'（默认 6 关） 或 'survival'（无尽波次）
+        self.mode = self.config.get("mode", "campaign")
         self.tilemap = TileMap.from_layout(get_level(level_index))
         self.players = [self._spawn_player()]
         self.bullets = []
@@ -43,7 +45,12 @@ class Level:
         self.effects = []
         self.powerups = []  # 道具
         self.enemies_killed = 0
-        self.enemies_to_spawn = self.config["enemy_count"]
+        # survival: 无限生成；campaign: 限总敌人数
+        if self.mode == "survival":
+            self.enemies_to_spawn = float("inf")
+            self.survival_waves = 0  # 已生成的总波次（每次 _spawn_enemy 算 +1 击杀点）
+        else:
+            self.enemies_to_spawn = self.config["enemy_count"]
         self._spawn_timer = 0.0
         self._spawn_idx = 0
         self.completed = False
@@ -61,7 +68,7 @@ class Level:
         return player
 
     def _spawn_enemy(self):
-        if self.enemies_to_spawn <= 0:
+        if self.mode != "survival" and self.enemies_to_spawn <= 0:
             return None
         if len(self.enemies) >= self.config["max_on_screen"]:
             return None
@@ -83,7 +90,10 @@ class Level:
                     enemy = EnemyTank(x, y, tier=tier,
                                       enemy_speed=self.config["enemy_speed"])
                     self.enemies.append(enemy)
-                    self.enemies_to_spawn -= 1
+                    if self.mode == "survival":
+                        self.survival_waves += 1
+                    else:
+                        self.enemies_to_spawn -= 1
                     self._spawn_idx = (idx + 1) % 3
                     return enemy
         return None
