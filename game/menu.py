@@ -5,8 +5,11 @@ import utils.colors as C
 from game.hud import get_font
 
 
-def draw_menu(surface: pygame.Surface, t: float = 0.0):
-    """主菜单画面。t 是时间（秒），用于标题闪烁。"""
+def draw_menu(surface: pygame.Surface, t: float = 0.0, num_players: int = 1):
+    """主菜单画面。t 是时间（秒），用于标题闪烁。
+
+    C1: num_players 1/2 决定模式提示.
+    """
     surface.fill(C.MENU_BG)
     title_font = get_font(72, True)
     hint_font = get_font(20)
@@ -14,23 +17,41 @@ def draw_menu(surface: pygame.Surface, t: float = 0.0):
     title = title_font.render("坦克大战", True, C.MENU_TITLE)
     surface.blit(title, (SCREEN_W // 2 - title.get_width() // 2, SCREEN_H // 3))
 
-    # 副标题（闪烁）
+    # 副标题（闪烁）— 反映当前模式
     if int(t * 2) % 2 == 0:
-        sub = hint_font.render("按回车或空格开始游戏", True, C.MENU_HINT)
+        if num_players == 2:
+            sub = hint_font.render("按 1 = 单人  /  按回车开始 2 人游戏", True, C.MENU_HINT)
+        else:
+            sub = hint_font.render("按 2 = 双人  /  按回车开始单人游戏", True, C.MENU_HINT)
         surface.blit(sub, (SCREEN_W // 2 - sub.get_width() // 2, SCREEN_H // 3 + 100))
 
     # 操作说明
-    lines = [
-        "WASD / 方向键 ： 移  动",
-        "空格 / J      ： 发  射",
-        "P             ： 暂  停",
-        "R             ： 重  开",
-        "H             ： 排行榜",
-    ]
+    if num_players == 2:
+        lines = [
+            "P1: WASD / 方向键 移动, 空格/J 射击",
+            "P2: 方向键 移动, Enter/RShift 射击",
+            "P             ： 暂  停",
+            "R             ： 重  开",
+            "H             ： 排行榜",
+        ]
+    else:
+        lines = [
+            "WASD / 方向键 ： 移  动",
+            "空格 / J      ： 发  射",
+            "P             ： 暂  停",
+            "R             ： 重  开",
+            "H             ： 排行榜",
+        ]
     for i, line in enumerate(lines):
         text = small_font.render(line, True, C.MENU_DARK)
         surface.blit(text, (SCREEN_W // 2 - text.get_width() // 2,
-                            SCREEN_H // 2 + 60 + i * 24))
+                            SCREEN_H // 2 + 40 + i * 22))
+
+    # 模式标记
+    mode_text = small_font.render(
+        f"当前模式: {num_players}P", True, C.MENU_TITLE
+    )
+    surface.blit(mode_text, (SCREEN_W // 2 - mode_text.get_width() // 2, SCREEN_H // 2 - 10))
 
     # 装饰：底部
     credits = small_font.render("Battle City 致敬作品  -  pygame-ce", True, C.MENU_DARK)

@@ -183,10 +183,12 @@ def test_base_destruction():
 def test_player_respawn():
     level = Level(0, PLAYER_LIVES, 0)
     level.players[0].dead = True
-    level._death_timer = 0.1
+    # C1: 死亡 timer 改为 _death_timer_p{index}, 1s 后重生
+    level._death_timer_p0 = 0.1
     level.update(0.2)
     assert level.players[0] is not None and not level.players[0].dead, "player respawned"
-    assert level.lives == PLAYER_LIVES - 1, f"lives: {level.lives}"
+    # C1: 玩家各自 lives 减 1 (独立生命)
+    assert level.players[0].lives == PLAYER_LIVES - 1, f"lives: {level.players[0].lives}"
 
 
 # ---- 12. 关卡切换 ----
@@ -205,6 +207,7 @@ def test_level_transition():
     g.lives = 3
     g.state = S.State.LEVEL_COMPLETE
     g.state_time = 3.0
+    g.num_players = 1  # C1: Game 需要 num_players
     g.next_level()
     assert g.state == S.State.PLAYING, f"state: {g.state}"
     assert g.level_index == 1, f"level_index: {g.level_index}"

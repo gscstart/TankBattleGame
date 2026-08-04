@@ -1,7 +1,8 @@
 """游戏主控制器：状态机 + 主循环。"""
 import pygame
 import time
-from settings import State, SCREEN_W, SCREEN_H, FPS, PLAYER_LIVES
+from settings import (State, SCREEN_W, SCREEN_H, FPS, PLAYER_LIVES,
+                      P2_ENABLED_DEFAULT)
 from game.level import Level
 from game.hud import draw_hud, get_font
 from game.menu import (draw_menu, draw_pause, draw_level_complete,
@@ -24,6 +25,8 @@ class Game:
         self.level_index = 0
         self.score = 0
         self.lives = PLAYER_LIVES
+        # C1: 双人合作设置 (菜单 K_2 切换)
+        self.num_players = 2 if P2_ENABLED_DEFAULT else 1
         # 玩家事件缓存（在 PLAYING 时传递给 player）
         self.events_buffer = []
         # 菜单/结束画面时间
@@ -65,6 +68,14 @@ class Game:
                     if self.menu_view == 'main':
                         if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                             self.start_game()
+                        elif event.key == pygame.K_2:
+                            # C1: 切到 2P 模式
+                            self.num_players = 2
+                            self.start_game()
+                        elif event.key == pygame.K_1:
+                            # 切回 1P 模式
+                            self.num_players = 1
+                            self.start_game()
                         elif event.key == pygame.K_h:
                             # 切到排行榜视图
                             self.menu_view = 'highscores'
@@ -94,7 +105,8 @@ class Game:
         self.level_index = 0
         self.score = 0
         self.lives = PLAYER_LIVES
-        self.level = Level(self.level_index, self.lives, self.score)
+        self.level = Level(self.level_index, self.lives, self.score,
+                           num_players=self.num_players)
         self.state = State.PLAYING
         self.state_time = 0.0
 
@@ -111,7 +123,8 @@ class Game:
             self._record_highscore()
             return
         # 关卡完成保留当前 score 和 lives
-        self.level = Level(self.level_index, self.lives, self.score)
+        self.level = Level(self.level_index, self.lives, self.score,
+                           num_players=self.num_players)
         self.state = State.PLAYING
         self.state_time = 0.0
 
@@ -166,7 +179,7 @@ class Game:
                 scores = highscores.load_highscores()
                 draw_highscores(self.screen, scores, self.menu_t)
             else:
-                draw_menu(self.screen, self.menu_t)
+                draw_menu(self.screen, self.menu_t, num_players=self.num_players)
         else:
             # 黑色背景
             self.screen.fill((0, 0, 0))
@@ -174,8 +187,13 @@ class Game:
                 # HUD
                 enemies_left = (self.level.enemies_to_spawn
                                 + len(self.level.enemies))
+                # C1: 双人模式传 p2_lives, 单人模式传 None (HUD 隐藏 P2 槽)
+                p2_lives = None
+                if self.num_players >= 2 and len(self.level.players) >= 2:
+                    p2_lives = self.level.players[1].lives
                 draw_hud(self.screen, self.lives, self.score,
-                         self.level_index, enemies_left)
+                         self.level_index, enemies_left,
+                         p2_lives=p2_lives)
                 # 地图和实体
                 self.level.draw(self.screen)
             # 遮罩

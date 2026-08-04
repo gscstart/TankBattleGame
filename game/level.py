@@ -8,7 +8,7 @@
 """
 import random
 import pygame
-from settings import RESPAWN_INVULN, MAP_X, MAP_Y, TILE, SCORE_PER_ENEMY
+from settings import RESPAWN_INVULN, MAP_X, MAP_Y, TILE, SCORE_PER_ENEMY, PLAYER_LIVES
 from world.tilemap import TileMap
 from world.levels import get_level, get_level_difficulty
 from entities.player import PlayerTank
@@ -28,18 +28,32 @@ POWERUP_SOUND = {
 
 
 class Level:
-    """单个关卡的运行状态。"""
+    """单个关卡的运行状态。
 
-    def __init__(self, level_index: int, lives: int, score: int):
+    C1 改造: 玩家改为 list[PlayerTank], 共享基地, 独立生命.
+    self.lives 保留为汇总 (用于 Game.score/lives 显示),
+    每玩家各自维护 .lives 属性.
+    """
+
+    def __init__(self, level_index: int, lives: int, score: int, num_players: int = 1):
         self.index = level_index
-        self.lives = lives
+        # 玩家生命用 list 维护: 每玩家 3 命, 独立计数
+        # lives 参数保留向后兼容 (campaign 模式 1 玩家时 = PLAYER_LIVES)
+        self.lives = lives  # 汇总 (用于 HUD 显示: P1 命数)
+        self.num_players = num_players
         self.score = score
         # 读取关卡难度配置
         self.config = get_level_difficulty(level_index)
         # 模式：'campaign'（默认 6 关） 或 'survival'（无尽波次）
         self.mode = self.config.get("mode", "campaign")
         self.tilemap = TileMap.from_layout(get_level(level_index))
-        self.players = [self._spawn_player()]
+        # C1: 创建 num_players 个玩家, P1/P2 用各自 InputMap
+        from game.input import P1_INPUT, P2_INPUT
+        input_maps = [P1_INPUT, P2_INPUT]
+        self.players = [
+            self._spawn_player(i, input_maps[i] if i < len(input_maps) else P1_INPUT)
+            for i in range(num_players)
+        ]
         self.bullets = []
         self.enemies = []
         self.effects = []
@@ -60,11 +74,20 @@ class Level:
         # Shovel 机制：保存原始砖块位置，用于结束恢复
         self._shovel_backup = None
 
-    def _spawn_player(self):
+    def _spawn_player(self, index: int = 0, input_map=None):
+        """index: 0=P1 默认出生点, 1=P2 在 P1 左侧一格. input_map: 该玩家键位."""
+        from game.input import P1_INPUT
         col, row = self.tilemap.player_spawn
+        if index == 1:
+            # P2: 在 P1 左侧一格 (不与 P1 重叠)
+            col = max(0, col - 2)
         x, y = self.tilemap.grid_to_world(col, row)
-        player = PlayerTank(x, y)
+        player = PlayerTank(x, y, input_map=input_map or P1_INPUT)
         player.flashing_time = RESPAWN_INVULN
+        # C1: 每玩家独立生命
+        player.lives = PLAYER_LIVES
+        # 玩家身份标号 (1-based, 给 HUD 用)
+        player.player_id = index + 1
         return player
 
     def _spawn_enemy(self):
@@ -85,7 +108,12 @@ class Level:
                 if spawn_rect.colliderect(e.rect):
                     break
             else:
-                if not spawn_rect.colliderect(self.players[0].rect):
+                # 不与任何存活玩家重叠
+                blocked = any(
+                    not p.dead and spawn_rect.colliderect(p.rect)
+                    for p in self.players
+                )
+                if not blocked:
                     tier = (self.enemies_killed) % 3
                     enemy = EnemyTank(x, y, tier=tier,
                                       enemy_speed=self.config["enemy_speed"])
@@ -98,29 +126,42 @@ class Level:
                     return enemy
         return None
 
-    def respawn_player(self):
-        if self.lives <= 0:
-            self._fail(events.REASON_LIVES_ZERO)
+    def respawn_player(self, index: int = 0):
+        """index: 重生哪个玩家 (0=P1, 1=P2). C1: 独立生命, 只重生自己."""
+        old = self.players[index]
+        if old.lives <= 0:
+            # 该玩家命用完, 不重生
             return
+        old.lives -= 1
+        if old.lives < 0:
+            old.lives = 0
+        # 创建新 PlayerTank 在原出生点, 保留 input_map 和 player_id
         col, row = self.tilemap.player_spawn
+        if index == 1:
+            col = max(0, col - 2)
         x, y = self.tilemap.grid_to_world(col, row)
-        # 保留道具状态再重生
-        old = self.players[0]
-        # 保留 input_map (A4): C1 双打时 P2 重生不能用 P1_INPUT,
-        # 显式传 old.input_map 保持 P1/P2 身份
-        self.players = [PlayerTank(x, y, input_map=old.input_map)]
-        self.players[0].flashing_time = RESPAWN_INVULN
+        new_player = PlayerTank(x, y, input_map=old.input_map)
+        new_player.flashing_time = RESPAWN_INVULN
+        new_player.lives = old.lives
+        new_player.player_id = old.player_id
         # 继承旧玩家的道具/状态
-        self.players[0].upgrade_level = old.upgrade_level
-        self.players[0].invincible = max(0.0, old.invincible - 1.0)  # 重生减 1s
-        self.players[0].frozen_enemies_timer = old.frozen_enemies_timer
-        # 恢复 shovel 状态
+        new_player.upgrade_level = old.upgrade_level
+        new_player.invincible = max(0.0, old.invincible - 1.0)  # 重生减 1s
+        new_player.frozen_enemies_timer = old.frozen_enemies_timer
+        self.players[index] = new_player
+        # 同步 self.lives (汇总, 用于 HUD)
+        self.lives = self.players[0].lives
+        # shovel 状态保留
         self._restore_shovel()
 
     def _fail(self, reason: str):
         """统一失败入口: 同时发 LEVEL_FAILED 事件 + 设 self.failed 标志。"""
         events.publish(events.LEVEL_FAILED, reason=reason)
         self.failed = True
+
+    def _all_players_dead(self) -> bool:
+        """C1: 所有玩家都耗尽生命 (lives <= 0)."""
+        return all(getattr(p, 'lives', 0) <= 0 for p in self.players)
 
     def base_destroyed(self):
         self._fail(events.REASON_BASE_DESTROYED)
@@ -148,37 +189,45 @@ class Level:
             else:
                 self._spawn_timer = self.config["spawn_interval"]
 
-        # 玩家
-        if not self.players[0].dead:
-            other_tanks = [e for e in self.enemies if not e.dead]
-            self.players[0].update(dt, self.tilemap, other_tanks, self.bullets,
-                               effects=self.effects)
-        else:
-            self.players[0].update_cooldown(dt)
-            if not hasattr(self, "_death_timer"):
-                self._death_timer = 1.0
-                # 玩家死亡首帧 publish (供成就/回放订阅)
-                events.publish(events.ENTITY_KILLED, kind="player", owner="enemy",
-                               x=self.players[0].rect.centerx,
-                               y=self.players[0].rect.centery,
-                               score_delta=0)
-            self._death_timer -= dt
-            if self._death_timer <= 0:
-                self.lives -= 1
-                if self.lives > 0:
-                    self.respawn_player()
+        # 玩家 (C1: 多玩家独立 update / 重生 / 失败检查)
+        # 收集所有存活玩家作为 other_tanks (敌人不会穿过玩家)
+        other_tanks = [e for e in self.enemies if not e.dead]
+        for idx, p in enumerate(self.players):
+            if not p.dead:
+                # other_tanks 中排除自己和死亡玩家
+                p_others = [t for t in (other_tanks + self.players) if t is not p and not t.dead]
+                p.update(dt, self.tilemap, p_others, self.bullets, effects=self.effects)
+            else:
+                p.update_cooldown(dt)
+                death_attr = f"_death_timer_p{idx}"
+                if not hasattr(self, death_attr):
+                    setattr(self, death_attr, 1.0)
+                    events.publish(events.ENTITY_KILLED, kind="player", owner="enemy",
+                                   x=p.rect.centerx, y=p.rect.centery,
+                                   score_delta=0, player_id=idx + 1)
+                timer = getattr(self, death_attr) - dt
+                if timer <= 0:
+                    self.respawn_player(idx)
+                    if hasattr(self, death_attr):
+                        delattr(self, death_attr)
                 else:
-                    self._fail(events.REASON_LIVES_ZERO)
-                if hasattr(self, "_death_timer"):
-                    del self._death_timer
+                    setattr(self, death_attr, timer)
+        # 所有玩家都死 + 基地未毁 = _fail
+        if self._all_players_dead() and not self.failed:
+            self._fail(events.REASON_LIVES_ZERO)
 
-        # 玩家道具状态计时
-        if not self.players[0].dead:
-            if self.players[0].invincible > 0:
-                self.players[0].invincible -= dt
-            if self.players[0].frozen_enemies_timer > 0:
-                self.players[0].frozen_enemies_timer -= dt
-                # 冻结所有敌人
+        # 玩家道具状态计时 (取任一存活玩家的 frozen 状态)
+        any_player_alive = any(not p.dead for p in self.players)
+        if any_player_alive:
+            # 冻结状态: 任一玩家激活就生效
+            max_frozen = max((p.frozen_enemies_timer for p in self.players if not p.dead), default=0.0)
+            for p in self.players:
+                if not p.dead and p.invincible > 0:
+                    p.invincible -= dt
+            if max_frozen > 0:
+                for p in self.players:
+                    if not p.dead:
+                        p.frozen_enemies_timer = max(0.0, p.frozen_enemies_timer - dt)
                 for e in self.enemies:
                     e.frozen = True
             else:
@@ -187,8 +236,9 @@ class Level:
 
         # 敌人
         other_tanks = []
-        if not self.players[0].dead:
-            other_tanks.extend(self.players)
+        for p in self.players:
+            if not p.dead:
+                other_tanks.append(p)
         # 基地位置（用于 AI 瞄准）
         base_pos = None
         if self.tilemap.base_tile and not self.tilemap.base_tile.destroyed:
@@ -198,10 +248,13 @@ class Level:
         # 敌人瞄准优先级：基地生命值低时倾向打基地
         priority = "base" if self.tilemap.base_tile and \
             not self.tilemap.base_tile.destroyed and random.random() < 0.4 else "player"
+        # AI 目标: 选最近存活玩家
+        alive_players = [p for p in self.players if not p.dead]
+        ai_target = alive_players[0] if alive_players else None
         for e in self.enemies:
             if e.dead:
                 continue
-            e.update(dt, self.tilemap, other_tanks, self.bullets, self.players[0],
+            e.update(dt, self.tilemap, other_tanks, self.bullets, ai_target,
                      effects=self.effects, base_pos=base_pos,
                      target_priority=priority)
 
@@ -234,12 +287,15 @@ class Level:
         # 道具
         for pu in self.powerups:
             pu.update(dt)
-            # 检测玩家拾取
-            if not self.players[0].dead and pu.rect.colliderect(self.players[0].rect):
-                self._apply_powerup(pu)
-                events.publish(events.POWERUP_PICKED, type=pu.type,
-                               x=pu.rect.centerx, y=pu.rect.centery)
-                pu.dead = True
+            # C1: 任一存活玩家拾取都生效, 按距离最近玩家分发效果
+            for p in self.players:
+                if not p.dead and pu.rect.colliderect(p.rect):
+                    self._apply_powerup(pu, target_idx=self.players.index(p))
+                    events.publish(events.POWERUP_PICKED, type=pu.type,
+                                   x=pu.rect.centerx, y=pu.rect.centery,
+                                   player_id=p.player_id)
+                    pu.dead = True
+                    break
         self.powerups = [pu for pu in self.powerups if not pu.dead]
 
         # 特效
@@ -257,11 +313,14 @@ class Level:
             events.publish(events.LEVEL_COMPLETED, score=self.score, level_index=self.index)
             self.completed = True
 
-    def _apply_powerup(self, pu):
-        """道具效果分发。"""
+    def _apply_powerup(self, pu, target_idx: int = 0):
+        """道具效果分发。C1: target_idx 决定哪个玩家受益 (按距离最近)."""
         from entities.effects import MuzzleFlash
         from utils.sound import play
-        p = self.players[0]
+        # target_idx 越界兜底
+        if target_idx < 0 or target_idx >= len(self.players):
+            target_idx = 0
+        p = self.players[target_idx]
         if pu.type == "star":
             # 升级（最多 2 级）
             p.upgrade_level = min(2, p.upgrade_level + 1)
@@ -289,8 +348,10 @@ class Level:
             # 15s 基地砖墙变钢墙
             self._activate_shovel(15.0)
         elif pu.type == "tank":
-            # +1 命
-            self.lives += 1
+            # +1 命 (C1: 加给 target 玩家)
+            p.lives = getattr(p, 'lives', PLAYER_LIVES) + 1
+            if target_idx == 0:
+                self.lives = p.lives
         # 每个道具播放不同音效
         play(POWERUP_SOUND.get(pu.type, "hit"))
 
@@ -353,8 +414,10 @@ class Level:
         self.tilemap.draw(surface)
         for e in self.enemies:
             e.draw(surface)
-        if not self.players[0].dead:
-            self.players[0].draw(surface)
+        # C1: 画所有存活玩家
+        for p in self.players:
+            if not p.dead:
+                p.draw(surface)
         for b in self.bullets:
             b.draw(surface)
         # 道具在实体之上、草丛之下
@@ -363,19 +426,21 @@ class Level:
         # 特效在最上层
         for fx in self.effects:
             fx.draw(surface)
-        # 死亡重生提示
-        if self.players[0].dead and hasattr(self, "_death_timer"):
-            from game.hud import get_font
-            font = get_font(28, True)
-            text = font.render("准备重生...", True, (255, 200, 80))
-            surface.blit(text, (surface.get_width() // 2 - text.get_width() // 2,
-                                surface.get_height() // 2 + 30))
-        # 玩家道具状态指示器
-        if not self.players[0].dead and self.players[0].invincible > 0:
-            from game.hud import get_font
-            font = get_font(16, True)
-            t = f"无敌 {self.players[0].invincible:.1f}s"
-            text = font.render(t, True, (200, 230, 255))
-            surface.blit(text, (self.players[0].rect.x - 10, self.players[0].rect.y - 22))
+        # C1: 死亡重生提示 (任一玩家)
+        from game.hud import get_font
+        for idx, p in enumerate(self.players):
+            if p.dead and hasattr(self, f"_death_timer_p{idx}"):
+                font = get_font(20, True)
+                tag = f"P{idx + 1}"
+                text = font.render(f"{tag} 准备重生...", True, (255, 200, 80))
+                surface.blit(text, (surface.get_width() // 2 - text.get_width() // 2,
+                                    surface.get_height() // 2 + 20 + idx * 26))
+        # C1: 玩家道具状态指示器 (任一存活玩家)
+        for p in self.players:
+            if not p.dead and p.invincible > 0:
+                font = get_font(14, True)
+                t = f"无敌 {p.invincible:.1f}s"
+                text = font.render(t, True, (200, 230, 255))
+                surface.blit(text, (p.rect.x - 6, p.rect.y - 18))
         # 草丛
         self.tilemap.draw_foreground(surface)

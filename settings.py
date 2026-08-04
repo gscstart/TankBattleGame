@@ -40,6 +40,13 @@ RESPAWN_INVULN = 2.0  # 出生后无敌时间
 SCORE_PER_ENEMY = 100
 SCORE_PER_LEVEL = 1000
 
+# 双人合作 (C1: F1 同屏双人 co-op)
+# - 决策 #1: 独立生命 (每玩家 3 命, 互不影响)
+# - 共享基地 (任一玩家被打中基地都算基地被毁)
+# - 共享分数
+# - 失败条件: 双玩家都死 OR 基地被毁
+P2_ENABLED_DEFAULT = True  # 菜单默认进 2P 模式 (可手动切 1P)
+
 # 敌人
 ENEMIES_PER_LEVEL = 15
 MAX_ENEMIES_ON_SCREEN = 3
