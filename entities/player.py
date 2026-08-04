@@ -92,8 +92,11 @@ class PlayerTank(Tank):
         self._time += dt
         self.update_cooldown(dt)
         # B5: 冰面跳过吸附 (玩家保持滑动状态, 不强制对齐格点)
+        # 同时清 snap_axis, 避免 on_ice 残留导致滑出冰面后无法吸附
         if not self.on_ice:
             self.update_snap(dt)
+        else:
+            self.snap_axis = None  # 冰面不吸附, 清残留
         # B5: 检测当前是否在冰面 TileIce 上 (用中心点)
         from world.tile import TileIce
         from settings import MAP_X as _MAP_X, MAP_Y as _MAP_Y, GRID_W, GRID_H

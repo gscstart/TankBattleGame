@@ -169,3 +169,39 @@ def test_ice_direction_can_still_be_changed():
     p.update(0.05, tilemap, [], [])
     # 方向应改变 (RIGHT 占上风因为 key_press_time 更大)
     assert p.dir == (1, 0), f"on ice, should still be able to change direction, dir={p.dir}"
+
+
+# ---- Bug B5: 冰面 snap_axis 残留, 离开冰面后不吸附 ----
+
+def test_player_snaps_to_grid_after_leaving_ice():
+    """玩家从冰面滑到非冰面 + 松键 + 滑行结束 -> snap_axis 流程能正常进入.
+
+    BUG 之前: on_ice 期间 update_snap 被跳过, snap_axis 残留非 None.
+    滑出冰面后松键进入吸附分支, 'if self.snap_axis is None' 永远 False,
+    玩家永远停在非格点, 后续变向困难.
+    修后: on_ice 时清 snap_axis, 离开冰面后吸附分支能正常触发.
+    """
+    # (8, 15) 是冰面, (8, 14) 是空地. 玩家从 (8, 15) 向上滑, 出冰面后松键
+    tilemap = _make_tilemap_with_ice([(8, 15)])
+    p = PlayerTank(0, 0)
+    _place_player_on_tile(p, 8, 15)
+    p.keys["up"] = True
+    p.key_press_time["up"] = 0.001
+    # 滑足够长时间确保离开冰面
+    for _ in range(30):
+        p.update(0.05, tilemap, [], [])
+    if p.on_ice:
+        for _ in range(30):
+            p.update(0.05, tilemap, [], [])
+    assert p.on_ice is False, \
+        f"expected to leave ice: y={p.rect.y} center y={p.rect.centery}"
+    # 松开 UP
+    p.keys["up"] = False
+    # 跑足够长时间让 slide_timer 衰减到 0 并进入吸附分支
+    for _ in range(30):
+        p.update(0.05, tilemap, [], [])
+    # 吸附分支: dir[0]==0 (UP 移动) 应对齐 x (与移动方向垂直的轴)
+    # 之前 bug: snap_axis 残留, 永远不进吸附分支, x 一直非格点
+    expected_x = round(p.rect.x / TILE) * TILE
+    assert p.rect.x == expected_x, \
+        f"after leaving ice + slide ends, x should snap to grid ({expected_x}), got {p.rect.x}"

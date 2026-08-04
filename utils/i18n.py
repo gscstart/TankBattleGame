@@ -48,6 +48,13 @@ def _load_lang(lang: str):
 
 # 启动时加载默认语言
 _load_lang(LANG)
+# 兜底: 默认语言加载失败时尝试 fallback (避免 _STRINGS={} 导致 UI 全坏)
+if not _STRINGS and LANG != "en":
+    LANG = "en"
+    _load_lang(LANG)
+if not _STRINGS and LANG != "zh":
+    LANG = "zh"
+    _load_lang(LANG)
 
 
 def set_lang(lang: str) -> bool:

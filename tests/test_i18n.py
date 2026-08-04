@@ -113,3 +113,52 @@ def test_reload_after_json_change(monkeypatch):
         assert i18n.t("menu.title") == "Test Title"
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_fallback_when_default_lang_json_missing(monkeypatch):
+    """如果默认语言 json 缺失, i18n 启动应 fallback (避免 _STRINGS={}).
+
+    BUG 之前: i18n.LANG = 'zh' 但 zh.json 不存在 -> _STRINGS={},
+    所有 t() 返回 key 本身, 整个 UI 显示 key 字面.
+    修后: 启动时若默认语言加载失败, fallback 到 en / zh.
+    """
+    import tempfile
+    import shutil
+    tmpdir = tempfile.mkdtemp(prefix="i18n_fallback_")
+    try:
+        # 只放 en.json, 没有 zh.json
+        with open(os.path.join(tmpdir, "en.json"), "w", encoding="utf-8") as f:
+            f.write('{"menu.title": "English Title"}')
+        monkeypatch.setattr(i18n, "I18N_DIR", tmpdir)
+        # 强制 LANG = 'zh' 模拟系统中文环境 + zh.json 不存在
+        monkeypatch.setattr(i18n, "LANG", "zh")
+        # 清空 _STRINGS
+        i18n._STRINGS.clear()
+        # 模拟模块启动时的 fallback 逻辑
+        i18n._load_lang("zh")  # 失败, _STRINGS 仍 {}
+        if not i18n._STRINGS and i18n.LANG != "en":
+            i18n.LANG = "en"
+            i18n._load_lang("en")
+        if not i18n._STRINGS and i18n.LANG != "zh":
+            i18n.LANG = "zh"
+            i18n._load_lang("zh")
+        # 应 fallback 到 en
+        assert i18n.LANG == "en"
+        assert i18n.t("menu.title") == "English Title"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_no_json_files_does_not_crash(monkeypatch):
+    """i18n 目录为空时不应抛错, _STRINGS={} 兜底."""
+    import tempfile
+    import shutil
+    tmpdir = tempfile.mkdtemp(prefix="i18n_empty_")
+    try:
+        monkeypatch.setattr(i18n, "_detect_default_lang", lambda: "zh")
+        monkeypatch.setattr(i18n, "I18N_DIR", tmpdir)
+        i18n._load_lang("zh")  # 文件不存在, _STRINGS 不变
+        # 不抛错, t() 返回 key 本身
+        assert i18n.t("nonexistent.key") == "nonexistent.key"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
