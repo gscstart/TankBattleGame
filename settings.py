@@ -103,11 +103,12 @@ MINE_BLAST_RADIUS = 100    # 地雷爆炸 AOE 像素范围
 MINE_BLAST_DAMAGE = True   # 地雷对敌人一击必杀 (与 grenade 一致)
 
 # 关卡难度配置（按 index 索引，越界循环）
-# enemy_count: 该关总敌人数（survival 模式无此字段）
+# enemy_count: 该关总敌人数（survival/boss 模式无此字段）
 # max_on_screen: 同屏最多敌人数
 # enemy_speed: 敌人速度
 # spawn_interval: 敌人生成间隔（秒）
-# mode: 'campaign' (默认) 或 'survival'（无尽波次）
+# mode: 'campaign' (默认) 或 'survival'（无尽波次）或 'boss'（BOSS 关卡）
+# boss_count: boss 模式专属, BOSS 数量
 LEVEL_DIFFICULTY = [
     {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72,  "spawn_interval": 2.0},  # 关 1
     {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72,  "spawn_interval": 2.0},  # 关 2
@@ -116,4 +117,11 @@ LEVEL_DIFFICULTY = [
     {"enemy_count": 20, "max_on_screen": 4, "enemy_speed": 84,  "spawn_interval": 1.5},  # 关 5
     {"enemy_count": 25, "max_on_screen": 5, "enemy_speed": 90,  "spawn_interval": 1.2},  # 关 6
     {"mode": "survival", "max_on_screen": 5, "enemy_speed": 96,  "spawn_interval": 0.8},  # 关 7 生存模式
+    {"mode": "boss", "boss_count": 1},  # 关 8 BOSS 关卡
 ]
+
+# C2: BOSS 关卡常量 (路线图 §7 风险点 - 暴露常量方便平衡)
+BOSS_HP = 10  # BOSS 血量
+BOSS_SPEED = 60  # BOSS 速度 (比普通敌人慢, 但能扛)
+BOSS_FIRE_COOLDOWN = 1.5  # BOSS 开火冷却 (秒)
+BOSS_COLOR = (180, 80, 200)  # 紫色, 区别于 tier 颜色

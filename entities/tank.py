@@ -36,6 +36,8 @@ class Tank:
         self.hit_flash_time = 0.0
         # 道具击杀标记（被 grenade 等道具杀死时设为 True，避免双重计分）
         self.killed_by_powerup = False
+        # C2: HP (默认 1, BOSS 等多血坦克覆盖)
+        self.hp = 1
 
     # ---- 移动与旋转 ----
     def try_move(self, dt: float, dx: float, dy: float, tilemap, other_tanks) -> bool:
@@ -185,11 +187,16 @@ class Tank:
             self.hit_flash_time -= dt
 
     def on_hit(self, bullet):
-        """被子弹命中。子类可重写。"""
+        """被子弹命中。子类可重写。
+
+        C2 改造: 减血, hp<=0 才 dead (BOSS 等多血坦克).
+        """
         if self.flashing_time > 0:
             return  # 无敌
         self.hit_flash_time = 0.3
-        self.dead = True
+        self.hp -= 1
+        if self.hp <= 0:
+            self.dead = True
 
     # ---- 渲染 ----
     def draw(self, surface: pygame.Surface):

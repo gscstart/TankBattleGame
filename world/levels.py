@@ -160,7 +160,33 @@ LEVEL_7_SURVIVAL = [
     ".......BBB.......",  # 16
 ]
 
-LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7_SURVIVAL]
+# 关 8: BOSS 关 (C2: F5)
+# BOSS 出生在中央 (col=8, row=7) - 由 Level 手动 spawn BossTank
+# 中央 5x5 留空作 BOSS 房间, 周围砖块屏障保护 BOSS
+# BOSS 行为: 朝玩家基地直线移动 + 周期开火
+LEVEL_8_BOSS = [
+    ".................",  # 0
+    "....B.BB.BB.B....",  # 1
+    ".................",  # 2
+    "..B...........B..",  # 3
+    ".................",  # 4
+    ".....BBBBBBB.....",  # 5
+    ".....B.....B.....",  # 6
+    ".....B.....B.....",  # 7  BOSS 房间中央 (BOSS 在 Level.__init__ 内 spawn)
+    ".....B.....B.....",  # 8
+    ".....BBBBBBB.....",  # 9
+    ".................",  # 10
+    "..B...........B..",  # 11
+    ".................",  # 12
+    "....B.BB.BB.B....",  # 13
+    "........P........",  # 14 玩家出生
+    ".......BBB.......",  # 15
+    ".......BBB.......",  # 16
+]
+
+# BOSS 关卡 char_map 扩展: K 字符映射到 BossTank
+# (放在文件底部, from_layout 时传入)
+LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7_SURVIVAL, LEVEL_8_BOSS]
 
 
 def get_level(index: int) -> list[str]:

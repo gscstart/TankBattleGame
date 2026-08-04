@@ -28,8 +28,8 @@ def _fake_event(type, key):
 
 # ---- 1. 关卡数据完整性 ----
 def test_level_data_integrity():
-    # B3: 现在 7 关 (6 关 campaign + 关 7 survival)
-    assert get_total_levels() == 7, f"7 levels, got {get_total_levels()}"
+    # C2: 现在 8 关 (6 关 campaign + 关 7 survival + 关 8 BOSS)
+    assert get_total_levels() == 8, f"8 levels, got {get_total_levels()}"
     for i, lvl in enumerate(LEVELS):
         assert len(lvl) == GRID_H, f"level {i+1}: {GRID_H} rows, got {len(lvl)}"
         for r, row in enumerate(lvl):
@@ -44,8 +44,8 @@ def test_level_data_integrity():
 
 # ---- 2. 难度递增 ----
 def test_difficulty_progression():
-    # B3: 现在 7 关 (6 关 campaign + 关 7 survival, survival 不参与递增)
-    assert len(LEVEL_DIFFICULTY) == 7, f"7 difficulty levels, got {len(LEVEL_DIFFICULTY)}"
+    # C2: 现在 8 关 (6 关 campaign + 关 7 survival + 关 8 BOSS, survival/boss 不参与递增)
+    assert len(LEVEL_DIFFICULTY) == 8, f"8 difficulty levels, got {len(LEVEL_DIFFICULTY)}"
     # 只对 campaign 6 关检查 enemy_count 递增
     for i in range(1, 6):
         prev = LEVEL_DIFFICULTY[i - 1]

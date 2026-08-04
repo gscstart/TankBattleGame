@@ -66,10 +66,12 @@ class Level:
         self.powerups = []  # 道具
         self.mines = []  # B4: 地雷
         self.enemies_killed = 0
-        # survival: 无限生成；campaign: 限总敌人数
+        # survival: 无限生成；campaign: 限总敌人数；boss: 不生成普通敌人 (BOSS 自己)
         if self.mode == "survival":
             self.enemies_to_spawn = float("inf")
             self.survival_waves = 0  # 已生成的总波次（每次 _spawn_enemy 算 +1 击杀点）
+        elif self.mode == "boss":
+            self.enemies_to_spawn = 0  # BOSS 关不生成普通敌人
         else:
             self.enemies_to_spawn = self.config["enemy_count"]
         self._spawn_timer = 0.0
@@ -80,6 +82,13 @@ class Level:
         self.screen_shake_time = 0.0
         # Shovel 机制：保存原始砖块位置，用于结束恢复
         self._shovel_backup = None
+        # C2: BOSS 关卡 - 在 (8, 7) 中央 spawn BossTank (5x5 BOSS 房间)
+        if self.mode == "boss":
+            from entities.boss import BossTank
+            from settings import TILE as _TILE
+            boss_x, boss_y = self.tilemap.grid_to_world(8, 7)
+            boss = BossTank(boss_x, boss_y)
+            self.enemies.append(boss)
 
     def _spawn_player(self, index: int = 0, input_map=None):
         """index: 0=P1 默认出生点, 1=P2 在 P1 旁边找不重叠位置. input_map: 该玩家键位.
@@ -228,14 +237,17 @@ class Level:
             if self._shovel_timer <= 0:
                 self._restore_shovel()
 
-        # 敌人生成
-        self._spawn_timer -= dt
-        if self._spawn_timer <= 0:
-            spawned = self._spawn_enemy()
-            if spawned is None and self.enemies_to_spawn > 0:
-                self._spawn_timer = 0.2
-            else:
-                self._spawn_timer = self.config["spawn_interval"]
+        # 敌人生成 (boss 模式: BOSS 已 spawn 在 __init__, 不再生)
+        if self.mode == "boss":
+            pass  # boss 模式无 spawn 计时
+        else:
+            self._spawn_timer -= dt
+            if self._spawn_timer <= 0:
+                spawned = self._spawn_enemy()
+                if spawned is None and self.enemies_to_spawn > 0:
+                    self._spawn_timer = 0.2
+                else:
+                    self._spawn_timer = self.config["spawn_interval"]
 
         # 玩家 (C1: 多玩家独立 update / 重生 / 失败检查)
         # 收集所有存活玩家作为 other_tanks (敌人不会穿过玩家)
@@ -379,10 +391,28 @@ class Level:
                 events.publish(events.BASE_DESTROYED)
                 self._fail(events.REASON_BASE_DESTROYED)
 
-        # 通关
-        if self.enemies_to_spawn <= 0 and len(self.enemies) == 0 and not self.failed:
-            events.publish(events.LEVEL_COMPLETED, score=self.score, level_index=self.index)
-            self.completed = True
+        # 通关条件:
+        # - campaign: enemies_to_spawn 用完 + 无存活敌人
+        # - survival: 永不自然 completed (用 _fail)
+        # - boss (C2): 所有 BOSS 都死 (BOSS 全 dead + 清理死 enemies)
+        if not self.failed and not self.completed:
+            if self.mode == "boss":
+                # BOSS 关: 所有 BossTank 都死才 completed
+                from entities.boss import BossTank
+                boss_alive = any(
+                    isinstance(e, BossTank) and not e.dead
+                    for e in self.enemies
+                )
+                if not boss_alive:
+                    # 清理死敌人 (避免 enemies 列表残留 dead BOSS, 影响 HUD enemies_left)
+                    self.enemies = [e for e in self.enemies if not e.dead]
+                    events.publish(events.LEVEL_COMPLETED, score=self.score,
+                                   level_index=self.index)
+                    self.completed = True
+            elif self.enemies_to_spawn <= 0 and len(self.enemies) == 0:
+                events.publish(events.LEVEL_COMPLETED, score=self.score,
+                               level_index=self.index)
+                self.completed = True
 
     def _apply_powerup(self, pu, target_idx: int = 0):
         """道具效果分发。C1: target_idx 决定哪个玩家受益 (按距离最近)."""

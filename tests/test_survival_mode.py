@@ -16,7 +16,8 @@ from game.level import Level
 # ---- 配置层 ----
 
 def test_total_levels_is_7():
-    assert get_total_levels() == 7
+    """C2: 现在 8 关 (6 campaign + 关 7 survival + 关 8 BOSS)."""
+    assert get_total_levels() == 8
 
 
 def test_level_7_is_survival_layout():
@@ -109,21 +110,21 @@ def test_next_level_6_to_7_not_victory():
     assert g.level.mode == "survival"
 
 
-def test_next_level_7_completes_to_victory(monkeypatch):
-    """关 7 survival 后 next_level 触发 VICTORY。"""
+def test_next_level_8_completes_to_victory(monkeypatch):
+    """C2: 关 8 BOSS 通关后 next_level 触发 VICTORY (关 7 survival 不再直接 VICTORY)."""
     import os
     from utils import highscores
-    tmp = "tests/.tmp_next_level_7_hs.json"
+    tmp = "tests/.tmp_next_level_8_hs.json"
     if os.path.exists(tmp):
         os.remove(tmp)
     monkeypatch.setattr(highscores, "DEFAULT_PATH", tmp)
     try:
         g = _make_game()
-        g.level_index = 6  # 0-based, 在关 7 survival 上
+        g.level_index = 7  # 0-based, 在关 8 BOSS 上
         g.lives = 3
         g.score = 5000
         g.next_level()
-        assert g.level_index == 7
+        assert g.level_index == 8
         assert g.state == "victory"
         # VICTORY 状态 self.level 被置 None（next_level 没创建新关）
         assert g.level is None
