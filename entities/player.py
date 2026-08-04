@@ -36,6 +36,8 @@ class PlayerTank(Tank):
         # B4: 道具状态计时器 (magnet 吸引 / laser 穿透)
         self.magnet_timer = 0.0
         self.laser_timer = 0.0
+        # B5: 冰面打滑 - 当前是否在冰面 TileIce 上
+        self.on_ice = False
         # 各方向键最后按下的时间（用于决定"最近按下优先"）
         # 默认值 0.0：保证测试或外部设置 keys 时也能被 _active_direction 选中
         self.key_press_time = {
@@ -89,7 +91,19 @@ class PlayerTank(Tank):
             return
         self._time += dt
         self.update_cooldown(dt)
-        self.update_snap(dt)
+        # B5: 冰面跳过吸附 (玩家保持滑动状态, 不强制对齐格点)
+        if not self.on_ice:
+            self.update_snap(dt)
+        # B5: 检测当前是否在冰面 TileIce 上 (用中心点)
+        from world.tile import TileIce
+        from settings import MAP_X as _MAP_X, MAP_Y as _MAP_Y, GRID_W, GRID_H
+        cx, cy = self.rect.centerx, self.rect.centery
+        gx = (cx - _MAP_X) // TILE
+        gy = (cy - _MAP_Y) // TILE
+        if 0 <= gx < GRID_W and 0 <= gy < GRID_H:
+            self.on_ice = isinstance(tilemap.tiles[gy][gx], TileIce)
+        else:
+            self.on_ice = False
 
         # 1) 决定目标方向（最近按下的方向）
         active = self._active_direction()
@@ -109,7 +123,9 @@ class PlayerTank(Tank):
                           tilemap, other_tanks)
         else:
             # 无方向键按下：惯性滑行
-            self.slide_timer = max(0.0, self.slide_timer - dt)
+            # B5: 冰面不衰减 slide_timer, 持续滑动 (无摩擦)
+            if not self.on_ice:
+                self.slide_timer = max(0.0, self.slide_timer - dt)
             if self.slide_timer > 0:
                 # 保持 slide_dir 朝向移动
                 self.try_move(dt, self.slide_dir[0] * self.speed * dt,
