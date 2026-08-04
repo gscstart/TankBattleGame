@@ -287,3 +287,64 @@ def test_hud_accepts_p2_lives():
     draw_hud(surface, lives=3, score=1000, level=0, enemies_left=5, p2_lives=None)
     # 双人模式 (p2_lives=2) 应正常画
     draw_hud(surface, lives=3, score=1000, level=0, enemies_left=5, p2_lives=2)
+
+
+# ---- 永久死亡 bug 回归测试 ----
+
+def test_permanently_dead_player_does_not_republish_killed():
+    """命用完的永久死亡玩家不应每帧重复 publish ENTITY_KILLED 事件.
+
+    BUG: 之前 respawn_player 命 0 时 delattr _death_timer, 下帧 else 分支
+    'if not hasattr' True 又重新 publish.
+    """
+    from utils import events as ev
+    ev.clear()
+    received = []
+    ev.subscribe(ev.ENTITY_KILLED, lambda **kw: received.append(kw))
+
+    lv = Level(0, lives=3, score=0, num_players=1)
+    lv.players[0].lives = 0  # 已经命 0
+    lv.players[0].dead = True
+    # 模拟"update 已感知死亡, timer 在倒数末段"状态
+    lv._death_timer_p0 = 0.05
+    # 跑 5 帧 update, 触发 respawn(失败 -> 永久死亡) 后, 不应再 publish
+    for _ in range(5):
+        lv.update(0.1)
+    # 关键断言: 整个过程中 ENTITY_KILLED 最多 publish 1 次 (首次)
+    # (而不是每帧 publish 1 次)
+    killed_count = sum(1 for r in received if r.get("kind") == "player")
+    assert killed_count <= 1, \
+        f"permanent dead player re-published ENTITY_KILLED: {killed_count} times"
+    ev.clear()
+
+
+def test_permanently_dead_player_does_not_block_update():
+    """永久死亡玩家不应让 update 卡死或重复触发 _fail."""
+    lv = Level(0, lives=3, score=0, num_players=1)
+    lv.players[0].lives = 0
+    lv.players[0].dead = True
+    # 跑 10 帧, 不应抛错
+    for _ in range(10):
+        lv.update(0.1)
+    # _fail 只应触发一次
+    assert lv.failed is True
+
+
+def test_all_players_perm_dead_triggers_fail_once():
+    """所有玩家都永久死亡时 _fail 只触发一次."""
+    from utils import events as ev
+    ev.clear()
+    fail_count = [0]
+    def on_fail(**kw):
+        fail_count[0] += 1
+    ev.subscribe(ev.LEVEL_FAILED, on_fail)
+    lv = Level(0, lives=3, score=0, num_players=2)
+    # 两玩家都命 0 + dead
+    lv.players[0].lives = 0
+    lv.players[0].dead = True
+    lv.players[1].lives = 0
+    lv.players[1].dead = True
+    for _ in range(10):
+        lv.update(0.1)
+    assert fail_count[0] == 1, f"LEVEL_FAILED published {fail_count[0]} times"
+    ev.clear()

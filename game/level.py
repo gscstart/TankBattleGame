@@ -13,6 +13,7 @@ from world.tilemap import TileMap
 from world.levels import get_level, get_level_difficulty
 from entities.player import PlayerTank
 from entities.enemy import EnemyTank
+from game.input import P1_INPUT, P2_INPUT
 from utils import events
 
 
@@ -48,7 +49,6 @@ class Level:
         self.mode = self.config.get("mode", "campaign")
         self.tilemap = TileMap.from_layout(get_level(level_index))
         # C1: 创建 num_players 个玩家, P1/P2 用各自 InputMap
-        from game.input import P1_INPUT, P2_INPUT
         input_maps = [P1_INPUT, P2_INPUT]
         self.players = [
             self._spawn_player(i, input_maps[i] if i < len(input_maps) else P1_INPUT)
@@ -127,10 +127,19 @@ class Level:
         return None
 
     def respawn_player(self, index: int = 0):
-        """index: 重生哪个玩家 (0=P1, 1=P2). C1: 独立生命, 只重生自己."""
+        """index: 重生哪个玩家 (0=P1, 1=P2). C1: 独立生命, 只重生自己.
+
+        命用完时记入 _perm_dead, update 跳过, 避免 ENTITY_KILLED 重复发布.
+        """
         old = self.players[index]
         if old.lives <= 0:
-            # 该玩家命用完, 不重生
+            # 该玩家命用完, 永久死亡, 不再 publish
+            if not hasattr(self, "_perm_dead"):
+                self._perm_dead = set()
+            self._perm_dead.add(index)
+            death_attr = f"_death_timer_p{index}"
+            if hasattr(self, death_attr):
+                delattr(self, death_attr)
             return
         old.lives -= 1
         if old.lives < 0:
@@ -192,7 +201,11 @@ class Level:
         # 玩家 (C1: 多玩家独立 update / 重生 / 失败检查)
         # 收集所有存活玩家作为 other_tanks (敌人不会穿过玩家)
         other_tanks = [e for e in self.enemies if not e.dead]
+        perm_dead = getattr(self, "_perm_dead", set())
         for idx, p in enumerate(self.players):
+            if idx in perm_dead:
+                # 永久死亡玩家: 跳过 (避免重复 publish ENTITY_KILLED)
+                continue
             if not p.dead:
                 # other_tanks 中排除自己和死亡玩家
                 p_others = [t for t in (other_tanks + self.players) if t is not p and not t.dead]
