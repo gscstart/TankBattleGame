@@ -21,12 +21,14 @@ venv/
 .DS_Store
 Thumbs.db
 
-# === 测试产物 ===
+# === 测试产物（脚本式测试生成的截图） ===
 screenshot_*.png
 visual_*.png
 cn_*.png
 *.log
 
-# === AI 助手缓存（机器本地、环境相关，不入库）===
-# oh-my-claudecode 插件状态：会话回放、HUD、任务状态、节流等
+# === pytest 缓存 ===
+.pytest_cache/
+
+# === AI 助手本地缓存（oh-my-claudecode 插件状态：会话回放/HUD/任务状态/节流等，机器本地、环境相关，不入库） ===
 .omc/
