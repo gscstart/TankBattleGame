@@ -9,6 +9,7 @@
 import random
 import pygame
 from settings import RESPAWN_INVULN, MAP_X, MAP_Y, TILE, SCORE_PER_ENEMY, PLAYER_LIVES
+from settings import MAGNET_DURATION, LASER_DURATION, MINE_COUNT
 from world.tilemap import TileMap
 from world.levels import get_level, get_level_difficulty
 from entities.player import PlayerTank
@@ -25,6 +26,10 @@ POWERUP_SOUND = {
     "clock":   "start",     # 冻结 - 钟形包络
     "shovel":  "hit",       # 加固 - 短促咔哒
     "tank":    "start",     # 加命 - 上行扫频
+    # B4: 3 个新道具
+    "magnet":  "start",     # 磁铁 - 上行扫频 (吸引)
+    "laser":   "hit",       # 激光 - 短促咔哒 (激活)
+    "mine":    "hit",       # 地雷 - 咔哒 (放置)
 }
 
 
@@ -59,6 +64,7 @@ class Level:
         self.enemies = []
         self.effects = []
         self.powerups = []  # 道具
+        self.mines = []  # B4: 地雷
         self.enemies_killed = 0
         # survival: 无限生成；campaign: 限总敌人数
         if self.mode == "survival":
@@ -194,6 +200,17 @@ class Level:
         """C1: 所有玩家都耗尽生命 (lives <= 0)."""
         return all(getattr(p, 'lives', 0) <= 0 for p in self.players)
 
+    def _get_magnet_target(self) -> tuple | None:
+        """B4: 若任一玩家有 magnet 激活中, 返回其中心 (cx, cy) 给 powerup.update 吸引.
+
+        多个玩家激活时取最近存活玩家 (避免道具在两个玩家之间反复横跳).
+        """
+        alive = [p for p in self.players if not p.dead and getattr(p, 'magnet_timer', 0.0) > 0.0]
+        if not alive:
+            return None
+        # 道具中心假设在 powerups 平均位置, 简化: 第一个玩家
+        return alive[0].rect.center
+
     def base_destroyed(self):
         self._fail(events.REASON_BASE_DESTROYED)
 
@@ -257,8 +274,15 @@ class Level:
             # 冻结状态: 任一玩家激活就生效
             max_frozen = max((p.frozen_enemies_timer for p in self.players if not p.dead), default=0.0)
             for p in self.players:
-                if not p.dead and p.invincible > 0:
-                    p.invincible -= dt
+                if not p.dead:
+                    if p.invincible > 0:
+                        p.invincible -= dt
+                    # B4: magnet 倒计时
+                    if getattr(p, 'magnet_timer', 0.0) > 0:
+                        p.magnet_timer = max(0.0, p.magnet_timer - dt)
+                    # B4: laser 倒计时
+                    if getattr(p, 'laser_timer', 0.0) > 0:
+                        p.laser_timer = max(0.0, p.laser_timer - dt)
             if max_frozen > 0:
                 for p in self.players:
                     if not p.dead:
@@ -320,8 +344,10 @@ class Level:
                     self.powerups.append(pu)
 
         # 道具
+        # B4: magnet 激活时所有道具飞向最近存活玩家
+        magnet_target = self._get_magnet_target()
         for pu in self.powerups:
-            pu.update(dt)
+            pu.update(dt, magnet_target=magnet_target)
             # C1: 任一存活玩家拾取都生效, 按距离最近玩家分发效果
             for p in self.players:
                 if not p.dead and pu.rect.colliderect(p.rect):
@@ -332,6 +358,11 @@ class Level:
                     pu.dead = True
                     break
         self.powerups = [pu for pu in self.powerups if not pu.dead]
+
+        # B4: 地雷
+        for mine in self.mines:
+            mine.update(dt, self.enemies, self.effects, events)
+        self.mines = [m for m in self.mines if not m.dead]
 
         # 特效
         for fx in self.effects:
@@ -388,6 +419,16 @@ class Level:
             p.lives = getattr(p, 'lives', PLAYER_LIVES) + 1
             if target_idx == 0:
                 self.lives = p.lives
+        elif pu.type == "magnet":
+            # B4: 8s 内磁铁吸引所有道具向玩家飞
+            p.magnet_timer = MAGNET_DURATION
+        elif pu.type == "laser":
+            # B4: 10s 内玩家子弹穿透敌人
+            p.laser_timer = LASER_DURATION
+        elif pu.type == "mine":
+            # B4: 在玩家位置前/中/后放 3 颗地雷
+            from entities.mine import spawn_mines_around
+            self.mines.extend(spawn_mines_around(p, count=MINE_COUNT))
         # 每个道具播放不同音效
         play(POWERUP_SOUND.get(pu.type, "hit"))
 
@@ -459,6 +500,9 @@ class Level:
         # 道具在实体之上、草丛之下
         for pu in self.powerups:
             pu.draw(surface)
+        # B4: 地雷在玩家之前画 (避免被玩家遮住)
+        for mine in self.mines:
+            mine.draw(surface)
         # 特效在最上层
         for fx in self.effects:
             fx.draw(surface)

@@ -76,8 +76,10 @@ def test_powerup_lifetime():
 
 
 def test_powerup_types():
-    assert len(ALL_TYPES) == 6, f"6 powerup types: {ALL_TYPES}"
-    valid = {"star", "grenade", "helmet", "clock", "shovel", "tank"}
+    # B4: 6 -> 9 (新增 magnet/laser/mine)
+    assert len(ALL_TYPES) == 9, f"9 powerup types (B4): {ALL_TYPES}"
+    valid = {"star", "grenade", "helmet", "clock", "shovel", "tank",
+             "magnet", "laser", "mine"}
     for t in ALL_TYPES:
         assert t in valid, f"valid type: {t}"
 
@@ -440,6 +442,7 @@ def test_regression_player_uses_setting_cooldown():
 
 def test_regression_powerup_distinct_sounds():
     from game.level import POWERUP_SOUND
-    assert len(POWERUP_SOUND) == 6
+    # B4: 6 -> 9 个 powerup
+    assert len(POWERUP_SOUND) == 9
     assert len(set(POWERUP_SOUND.values())) >= 2, \
         f"distinct sounds: {set(POWERUP_SOUND.values())}"

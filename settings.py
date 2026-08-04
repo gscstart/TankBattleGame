@@ -95,6 +95,13 @@ POWERUP_CARRIER_CHANCE = 0.20  # 每个敌人有 20% 概率成为红闪敌人
 POWERUP_CARRIER_COLOR = (255, 60, 60)  # 鲜红，区别于 tier 颜色
 POWERUP_CARRIER_FLASH_PERIOD = 0.10  # 闪烁周期（秒），值越小越快
 
+# 道具时长常量 (B4: magnet/laser/mine 扩展)
+MAGNET_DURATION = 8.0      # 磁铁持续时间 (秒)
+LASER_DURATION = 10.0      # 激光持续时间 (秒)
+MINE_COUNT = 3             # 一次放几颗地雷
+MINE_BLAST_RADIUS = 100    # 地雷爆炸 AOE 像素范围
+MINE_BLAST_DAMAGE = True   # 地雷对敌人一击必杀 (与 grenade 一致)
+
 # 关卡难度配置（按 index 索引，越界循环）
 # enemy_count: 该关总敌人数（survival 模式无此字段）
 # max_on_screen: 同屏最多敌人数

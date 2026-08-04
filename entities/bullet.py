@@ -26,6 +26,7 @@ class Bullet:
         )
         self.dead = False
         self.can_break_steel = False  # 默认不能破钢墙
+        self.is_laser = False  # B4: 激光模式 - 穿透敌人不消失
         # 拖尾：最近几帧的中心位置 [(x, y), ...]
         self.trail = []
 
@@ -99,9 +100,12 @@ class Bullet:
                     from utils.sound import play
                     play("explosion")
                     self._spawn_explosion(effects, scale=1.0, big=True)
-                    self.dead = True
+                    # B4: 激光穿透 - 不设 dead, 继续飞行
                     tank.on_hit(self)
-                    return
+                    if not self.is_laser:
+                        self.dead = True
+                        return
+                    break  # 一个 step 内只击中一个坦克
 
     def _spawn_explosion(self, effects, scale=1.0, big=False):
         if effects is None:
@@ -123,8 +127,10 @@ class Bullet:
             t = (i + 1) / max(1, len(self.trail))
             r = max(1, int(5 * t))
             alpha = int(140 * t)
+            # B4: 激光拖尾更亮 (黄白色)
+            color = (255, 255, 180, alpha) if self.is_laser else (255, 230, 140, alpha)
             s = pygame.Surface((r * 2 + 2, r * 2 + 2), pygame.SRCALPHA)
-            pygame.draw.circle(s, (255, 230, 140, alpha), (r + 1, r + 1), r)
+            pygame.draw.circle(s, color, (r + 1, r + 1), r)
             surface.blit(s, (tx - r - 1, ty - r - 1))
         # 主体
         draw_bullet(surface, self.rect, self.direction)

@@ -160,6 +160,9 @@ class Tank:
             can_break = getattr(self, "upgrade_level", 0) >= 2
         if can_break:
             bullet.can_break_steel = True
+        # B4: 玩家在 laser 激活期间射击, 子弹穿透敌人不消失
+        if self.is_player and getattr(self, "laser_timer", 0.0) > 0.0:
+            bullet.is_laser = True
         bullets.append(bullet)
         # 炮口闪光
         if effects is not None:

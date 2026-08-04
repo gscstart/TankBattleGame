@@ -33,6 +33,9 @@ class PlayerTank(Tank):
             "up": False, "down": False, "left": False, "right": False,
             "fire": False,
         }
+        # B4: 道具状态计时器 (magnet 吸引 / laser 穿透)
+        self.magnet_timer = 0.0
+        self.laser_timer = 0.0
         # 各方向键最后按下的时间（用于决定"最近按下优先"）
         # 默认值 0.0：保证测试或外部设置 keys 时也能被 _active_direction 选中
         self.key_press_time = {
