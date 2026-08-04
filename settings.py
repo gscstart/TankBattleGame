@@ -83,6 +83,11 @@ ENEMY_TIER_COLORS = [
     (110, 200, 110),  # 绿
 ]
 
+# 红闪敌人（powerup carrier）：身上发红光，被击杀时 100% 掉落道具
+POWERUP_CARRIER_CHANCE = 0.20  # 每个敌人有 20% 概率成为红闪敌人
+POWERUP_CARRIER_COLOR = (255, 60, 60)  # 鲜红，区别于 tier 颜色
+POWERUP_CARRIER_FLASH_PERIOD = 0.10  # 闪烁周期（秒），值越小越快
+
 # 关卡难度配置（按 index 索引，越界循环）
 # enemy_count: 该关总敌人数
 # max_on_screen: 同屏最多敌人数

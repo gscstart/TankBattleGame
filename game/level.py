@@ -212,9 +212,11 @@ class Level:
                     self.score += SCORE_PER_ENEMY
                     self.enemies_killed += 1
                     events.publish(events.ENTITY_KILLED, kind="enemy", owner="player",
-                                   x=e.rect.centerx, y=e.rect.centery, score_delta=SCORE_PER_ENEMY)
-                # 25% 概率掉落道具
-                if random.random() < 0.25:
+                                   x=e.rect.centerx, y=e.rect.centery,
+                                   score_delta=SCORE_PER_ENEMY,
+                                   is_powerup_carrier=e.is_powerup_carrier)
+                # 红闪敌人 100% 掉道具，普通敌人 25% 掉
+                if e.is_powerup_carrier or random.random() < 0.25:
                     from entities.powerup import spawn_random_powerup
                     pu = spawn_random_powerup(e.rect.centerx - TILE // 2, e.rect.centery - TILE // 2)
                     self.powerups.append(pu)
