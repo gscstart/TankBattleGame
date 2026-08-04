@@ -268,3 +268,67 @@ def test_mine_lifetime_expires():
     result = mine.update(0.1, [], [], __import__('utils.events', fromlist=['events']))
     assert result is False
     assert mine.dead
+
+
+# ---- Bug B4-1: mine 击杀应加分 (与 grenade 一致) ----
+
+def test_mine_kill_increases_level_score():
+    """mine 杀敌应 self.score += SCORE_PER_ENEMY (与 grenade 一致).
+
+    BUG: 之前 mine._blast 只发 ENTITY_KILLED 事件, 没人累加 self.score,
+    导致地雷白打 (击杀了但分数 0 增长).
+    修法: mine.update 返回 kill_count, Level.update 累加 self.score.
+    """
+    from settings import SCORE_PER_ENEMY
+    lv = Level(0, lives=3, score=0, num_players=1)
+    # 关掉敌人生成, 避免新敌人被 AOE 误杀
+    lv.enemies_to_spawn = 0
+    mine = Mine(100, 100)
+    lv.mines.append(mine)
+    enemy = EnemyTank(100, 100, tier=0, is_powerup_carrier=False)
+    enemy.born_invuln = 0
+    lv.enemies.append(enemy)
+    initial_score = lv.score
+    lv.update(0.1)
+    assert lv.score == initial_score + SCORE_PER_ENEMY, \
+        f"score should increase by {SCORE_PER_ENEMY}, was {initial_score} now {lv.score}"
+
+
+def test_mine_aoe_kill_increases_score_by_count():
+    """mine AOE 多杀敌应 +SCORE_PER_ENEMY * count."""
+    from settings import SCORE_PER_ENEMY
+    lv = Level(0, lives=3, score=0, num_players=1)
+    lv.enemies_to_spawn = 0  # 关掉新生成
+    mine = Mine(200, 200)
+    lv.mines.append(mine)
+    # 3 个 AOE 内敌人
+    for dx, dy in [(20, 0), (-20, 0), (0, 20)]:
+        e = EnemyTank(200 + dx, 200 + dy, tier=0, is_powerup_carrier=False)
+        e.born_invuln = 0
+        lv.enemies.append(e)
+    initial_score = lv.score
+    lv.update(0.1)
+    # 至少 3 个 AOE 死亡
+    assert lv.score == initial_score + 3 * SCORE_PER_ENEMY
+
+
+def test_mine_no_enemy_no_score_change():
+    """mine 没敌人时 score 不变."""
+    from settings import SCORE_PER_ENEMY
+    lv = Level(0, lives=3, score=0, num_players=1)
+    lv.enemies_to_spawn = 0
+    mine = Mine(100, 100)
+    lv.mines.append(mine)
+    initial_score = lv.score
+    lv.update(0.1)  # 无敌人, mine 不爆炸
+    assert lv.score == initial_score
+
+
+def test_mine_lifetime_expires():
+    """地雷 LIFETIME 到期自动消失 (不爆炸)."""
+    mine = Mine(0, 0)
+    mine.spawn_time = mine.spawn_time - 100  # 100s 前 spawn
+    # update 返回 0 (不爆炸, 不杀敌)
+    result = mine.update(0.1, [], [], __import__('utils.events', fromlist=['events']))
+    assert result == 0
+    assert mine.dead

@@ -24,38 +24,49 @@ class Mine:
         self.dead = False
         self._blasted = False  # 防止一帧内重复爆炸 (AOE 多敌人)
 
-    def update(self, dt: float, enemies: list, effects: list, events_mod) -> bool:
-        """检查敌人碰撞. 若爆炸返回 True (让 Level 处理后续).
+    def update(self, dt: float, enemies: list, effects: list, events_mod) -> int:
+        """检查敌人碰撞. 返回本帧 AOE 击杀数 (0 = 没爆炸, N = 杀了 N 个).
 
+        Level.update 用返回值累加 self.score (与 grenade 一致).
         enemies: 当前所有 enemies 列表
         effects: Level.effects (追加 Explosion)
         events_mod: utils.events 模块 (发 ENTITY_KILLED 事件)
-        返回 True 表示这帧引爆了.
         """
         if self.dead or self._blasted:
-            return False
+            return 0
         # LIFETIME 到期自动消失
         if time.time() - self.spawn_time > self.LIFETIME:
             self.dead = True
-            return False
+            return 0
         # 敌人碰触检测
         for e in enemies:
             if e.dead or getattr(e, 'born_invuln', 0) > 0:
                 continue
             if self.rect.colliderect(e.rect):
-                self._blast(enemies, effects, events_mod)
-                return True
-        return False
+                # 触发的敌人先标记 dead, 避免 AOE 重复计分
+                e.dead = True
+                e.killed_by_powerup = True
+                e.hit_flash_time = 0.3
+                events_mod.publish(events_mod.ENTITY_KILLED, kind="enemy",
+                                   owner="powerup", x=e.rect.centerx,
+                                   y=e.rect.centery,
+                                   score_delta=SCORE_PER_ENEMY)
+                return self._blast(enemies, effects, events_mod)
+        return 0
 
-    def _blast(self, enemies, effects, events_mod):
-        """AOE 爆炸, 范围内所有敌人死亡."""
+    def _blast(self, enemies, effects, events_mod) -> int:
+        """AOE 爆炸, 范围内除已计的触发敌人外其他敌人死亡. 返回击杀数(含触发).
+
+        触发敌人已在 update() 中计分 + 设 dead, 不会被此函数再次计入.
+        """
         from entities.effects import Explosion
         self._blasted = True
         self.dead = True
         cx, cy = self.rect.centerx, self.rect.centery
         # 主爆炸特效 (大)
         effects.append(Explosion(cx, cy, big=True))
-        # AOE 内所有敌人死亡
+        # AOE 内剩余敌人死亡 (触发敌人已 dead, 跳过)
+        kill_count = 1  # 触发敌人已计 1 个
         for e in enemies:
             if e.dead:
                 continue
@@ -69,6 +80,8 @@ class Mine:
                 events_mod.publish(events_mod.ENTITY_KILLED, kind="enemy",
                                    owner="powerup", x=ex, y=ey,
                                    score_delta=SCORE_PER_ENEMY)
+                kill_count += 1
+        return kill_count
 
     def draw(self, surface: pygame.Surface):
         if self.dead:

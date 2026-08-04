@@ -360,9 +360,13 @@ class Level:
         self.powerups = [pu for pu in self.powerups if not pu.dead]
 
         # B4: 地雷
+        mine_kills = 0
         for mine in self.mines:
-            mine.update(dt, self.enemies, self.effects, events)
+            mine_kills += mine.update(dt, self.enemies, self.effects, events)
         self.mines = [m for m in self.mines if not m.dead]
+        # mine 击杀加分 (与 grenade 一致, killed_by_powerup=True 跳过下帧重复计分)
+        if mine_kills > 0:
+            self.score += mine_kills * SCORE_PER_ENEMY
 
         # 特效
         for fx in self.effects:
