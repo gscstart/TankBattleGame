@@ -3,9 +3,10 @@ import pygame
 import time
 from settings import State, SCREEN_W, SCREEN_H, FPS, PLAYER_LIVES
 from game.level import Level
-from game.hud import draw_hud
+from game.hud import draw_hud, get_font
 from game.menu import (draw_menu, draw_pause, draw_level_complete,
-                       draw_game_over)
+                       draw_game_over, draw_highscores)
+from utils import highscores
 from world.levels import LEVELS
 
 
@@ -27,6 +28,10 @@ class Game:
         self.events_buffer = []
         # 菜单/结束画面时间
         self.menu_t = 0.0
+        # 菜单子视图：'main' / 'highscores'
+        self.menu_view = 'main'
+        # 通关上榜后的提示（VICTORY 状态下显示用）
+        self.highscore_rank = -1  # -1 表示未上榜
 
     def run(self):
         last = time.time()
@@ -57,8 +62,18 @@ class Game:
             # 状态分发
             if self.state == State.MENU:
                 if event.type == pygame.KEYDOWN:
-                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        self.start_game()
+                    if self.menu_view == 'main':
+                        if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                            self.start_game()
+                        elif event.key == pygame.K_h:
+                            # 切到排行榜视图
+                            self.menu_view = 'highscores'
+                            self.menu_t = 0.0
+                    elif self.menu_view == 'highscores':
+                        if event.key in (pygame.K_h, pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
+                            # 返回主菜单
+                            self.menu_view = 'main'
+                            self.menu_t = 0.0
             elif self.state == State.PLAYING:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     self.state = State.PAUSED
@@ -91,16 +106,31 @@ class Game:
         if self.level_index >= len(LEVELS):
             self.state = State.VICTORY
             self.state_time = 0.0
+            # 通关联机尝试上榜（B2 排行榜）
+            self._record_highscore()
             return
         # 关卡完成保留当前 score 和 lives
         self.level = Level(self.level_index, self.lives, self.score)
         self.state = State.PLAYING
         self.state_time = 0.0
 
+    def _record_highscore(self):
+        """通关时尝试把分数写入排行榜。失败兜底（I/O 错误不阻塞游戏）。"""
+        try:
+            rank, _ = highscores.add_score(
+                self.score, len(LEVELS), name="YOU"
+            )
+            self.highscore_rank = rank
+        except OSError:
+            self.highscore_rank = -1
+
     def update(self, dt: float):
         self.state_time += dt
         if self.state == State.MENU:
             self.menu_t += dt
+            if self.menu_view == 'highscores':
+                # 排行榜视图不需要 update
+                pass
         elif self.state == State.PLAYING:
             if self.level:
                 self.level.update(dt)
@@ -123,7 +153,11 @@ class Game:
 
     def draw(self):
         if self.state == State.MENU:
-            draw_menu(self.screen, self.menu_t)
+            if self.menu_view == 'highscores':
+                scores = highscores.load_highscores()
+                draw_highscores(self.screen, scores, self.menu_t)
+            else:
+                draw_menu(self.screen, self.menu_t)
         else:
             # 黑色背景
             self.screen.fill((0, 0, 0))
@@ -145,3 +179,12 @@ class Game:
                 draw_game_over(self.screen, self.score, victory=False, t=self.menu_t)
             elif self.state == State.VICTORY:
                 draw_game_over(self.screen, self.score, victory=True, t=self.menu_t)
+                # 上榜提示
+                if self.highscore_rank >= 0:
+                    hs_text = get_font(20).render(
+                        f"恭喜上榜！第 {self.highscore_rank + 1} 名  -  H 键查看",
+                        True, (255, 220, 100)
+                    )
+                    self.screen.blit(hs_text,
+                                     (SCREEN_W // 2 - hs_text.get_width() // 2,
+                                      SCREEN_H // 2 + 110))

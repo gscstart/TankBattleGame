@@ -25,6 +25,7 @@ def draw_menu(surface: pygame.Surface, t: float = 0.0):
         "空格 / J      ： 发  射",
         "P             ： 暂  停",
         "R             ： 重  开",
+        "H             ： 排行榜",
     ]
     for i, line in enumerate(lines):
         text = small_font.render(line, True, C.MENU_DARK)
@@ -76,3 +77,31 @@ def draw_game_over(surface: pygame.Surface, score: int, victory: bool = False, t
     if int(t * 2) % 2 == 0:
         hint = get_font(22).render("按 R 重开  /  ESC 退出", True, C.MENU_TITLE)
         surface.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 70))
+
+
+def draw_highscores(surface: pygame.Surface, scores: list, t: float = 0.0):
+    """排行榜画面。scores: [{name, score, level, date}, ...]"""
+    surface.fill(C.MENU_BG)
+    title_font = get_font(48, True)
+    row_font = get_font(20)
+    small_font = get_font(16)
+    # 标题
+    title = title_font.render("荣  誉  榜", True, C.MENU_TITLE)
+    surface.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 50))
+    if not scores:
+        empty = row_font.render("暂无记录 — 通关来上榜！", True, C.MENU_HINT)
+        surface.blit(empty, (SCREEN_W // 2 - empty.get_width() // 2, SCREEN_H // 2))
+    else:
+        # 表头
+        header = small_font.render("  排名    名字       分数       关卡  日期", True, C.MENU_DARK)
+        surface.blit(header, (SCREEN_W // 2 - header.get_width() // 2, 130))
+        # 列表
+        for i, s in enumerate(scores):
+            row_str = f"  {i + 1:2d}      {s['name']:<8s}  {s['score']:06d}    {s['level']}    {s.get('date', '')}"
+            color = C.MENU_TITLE if i == 0 else C.MENU_HINT
+            text = row_font.render(row_str, True, color)
+            surface.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 170 + i * 32))
+    # 返回提示
+    if int(t * 2) % 2 == 0:
+        back = small_font.render("按 H 或 ESC 返回主菜单", True, C.MENU_DARK)
+        surface.blit(back, (SCREEN_W // 2 - back.get_width() // 2, SCREEN_H - 40))
