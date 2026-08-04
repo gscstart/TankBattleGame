@@ -2,6 +2,7 @@
 import pygame
 from settings import SCREEN_W, HUD_H, MAP_X, MAP_Y
 import utils.colors as C
+from utils.i18n import t
 
 
 # 缓存找到的 CJK 字体名
@@ -59,7 +60,7 @@ def draw_hud(surface: pygame.Surface, lives: int, score: int, level: int,
     tank_w = 14
 
     # ---- P1 生命 (左) ----
-    p1_label = label_font.render("P1", True, C.HUD_ACCENT)
+    p1_label = label_font.render(t("hud.p1"), True, C.HUD_ACCENT)
     surface.blit(p1_label, (12, 6))
     for i in range(max_lives):
         x = 12 + i * (tank_w + 3)
@@ -75,7 +76,7 @@ def draw_hud(surface: pygame.Surface, lives: int, score: int, level: int,
     if p2_lives is not None:
         p2_color = getattr(C, 'P2_COLOR', (140, 200, 255))
         p2_dark = getattr(C, 'P2_DARK', (90, 140, 200))
-        p2_label = label_font.render("P2", True, C.HUD_ACCENT)
+        p2_label = label_font.render(t("hud.p2"), True, C.HUD_ACCENT)
         surface.blit(p2_label, (p2_x, 6))
         for i in range(max_lives):
             x = p2_x + i * (tank_w + 3)
@@ -87,17 +88,18 @@ def draw_hud(surface: pygame.Surface, lives: int, score: int, level: int,
                 pygame.draw.line(surface, C.BLACK, (x + tank_w, y), (x, y + tank_w), 2)
 
     # 中：关卡
-    level_text = get_font(20, True).render(f"第 {level + 1} 关", True, text_color)
+    level_text = get_font(20, True).render(
+        t("hud.level", level=level + 1), True, text_color)
     surface.blit(level_text, (SCREEN_W // 2 - level_text.get_width() // 2, 18))
 
     # 右上：剩余敌人
-    enemies_label = label_font.render("剩余", True, C.HUD_ACCENT)
+    enemies_label = label_font.render(t("hud.enemies"), True, C.HUD_ACCENT)
     surface.blit(enemies_label, (SCREEN_W - enemies_label.get_width() - 12, 6))
     enemies_text = get_font(20, True).render(f"{enemies_left:02d}", True, text_color)
     surface.blit(enemies_text, (SCREEN_W - enemies_text.get_width() - 12, 26))
 
     # 分数（居中偏左, 关卡文本下方）
-    score_label = label_font.render("分数", True, C.HUD_ACCENT)
+    score_label = label_font.render(t("hud.score"), True, C.HUD_ACCENT)
     score_label_x = SCREEN_W // 2 - 80
     surface.blit(score_label, (score_label_x, 6))
     score_text = get_font(18, True).render(f"{score:06d}", True, text_color)

@@ -8,6 +8,8 @@ from game.hud import draw_hud, get_font
 from game.menu import (draw_menu, draw_pause, draw_level_complete,
                        draw_game_over, draw_highscores)
 from utils import highscores
+import utils.i18n as i18n
+from utils.i18n import t
 from world.levels import LEVELS
 
 
@@ -80,6 +82,9 @@ class Game:
                             # 切到排行榜视图
                             self.menu_view = 'highscores'
                             self.menu_t = 0.0
+                        elif event.key == pygame.K_l:
+                            # B6: 切换语言 zh <-> en
+                            i18n.set_lang("en" if i18n.get_lang() == "zh" else "zh")
                     elif self.menu_view == 'highscores':
                         if event.key in (pygame.K_h, pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
                             # 返回主菜单
@@ -208,7 +213,7 @@ class Game:
                 if (self.level and self.level.mode == "survival"
                         and self.highscore_rank >= 0):
                     hs_text = get_font(20).render(
-                        f"生存得分上榜！第 {self.highscore_rank + 1} 名  -  H 键查看",
+                        t("menu.survival.rank_hint", rank=self.highscore_rank + 1),
                         True, (255, 220, 100)
                     )
                     self.screen.blit(hs_text,
@@ -219,7 +224,7 @@ class Game:
                 # 上榜提示
                 if self.highscore_rank >= 0:
                     hs_text = get_font(20).render(
-                        f"恭喜上榜！第 {self.highscore_rank + 1} 名  -  H 键查看",
+                        t("menu.victory.rank_hint", rank=self.highscore_rank + 1),
                         True, (255, 220, 100)
                     )
                     self.screen.blit(hs_text,
