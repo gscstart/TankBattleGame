@@ -11,6 +11,7 @@ from game.menu import (draw_menu, draw_pause, draw_level_complete,
 from utils import highscores
 from utils import achievements as ach
 from utils import replay as replay_mod
+from utils import music as music_mod
 import utils.i18n as i18n
 from utils.i18n import t
 from world.levels import LEVELS
@@ -49,6 +50,9 @@ class Game:
         self.replay_frame_idx: int = 0       # 当前播放到第几帧
         self.replay_list: list = []           # 菜单回放列表缓存
         self.replay_selected_idx: int = 0    # 菜单选中索引
+        # F20: 背景音乐
+        self.music = music_mod.MusicManager()
+        self._last_bgm_state: str = ""       # 上一帧的 state (避免每帧切 track)
 
     def run(self):
         last = time.time()
@@ -107,6 +111,15 @@ class Game:
                         elif event.key == pygame.K_l:
                             # B6: 切换语言 zh <-> en
                             i18n.set_lang("en" if i18n.get_lang() == "zh" else "zh")
+                        elif event.key == pygame.K_m:
+                            # F20: 开关 BGM
+                            self.music.set_enabled(not self.music.is_enabled())
+                        elif event.key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS):
+                            # F20: 音量 +
+                            self.music.set_volume(self.music.get_volume() + 0.1)
+                        elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                            # F20: 音量 -
+                            self.music.set_volume(self.music.get_volume() - 0.1)
                     elif self.menu_view == 'highscores':
                         if event.key in (pygame.K_h, pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
                             # 返回主菜单
@@ -147,6 +160,8 @@ class Game:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     self.state = State.PAUSED
                     self.state_time = 0.0
+                    # F20: 暂停 BGM
+                    self.music.pause()
                     return
                 # C6: 重放模式时禁用真实键盘 (player.keys 由 ReplayPlayer 覆盖)
                 if self.replay_mode:
@@ -164,6 +179,8 @@ class Game:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     self.state = State.PLAYING
                     self.state_time = 0.0
+                    # F20: 恢复 BGM
+                    self.music.resume()
             elif self.state in (State.LEVEL_COMPLETE, State.GAME_OVER, State.VICTORY):
                 # 任何键在 GAME_OVER 时由 R 键处理
                 pass
@@ -305,6 +322,19 @@ class Game:
             if self.replay_mode:
                 self.replay_mode = False
                 self.replay_player = None
+
+        # F20: 根据 state 切 BGM (state 变化时切, 同 state 不切)
+        current_state_str = self.state
+        if current_state_str != self._last_bgm_state:
+            track = music_mod.track_for_state(current_state_str)
+            if track is not None:
+                self.music.play_track(track)
+            else:
+                # state 切到 paused/level_complete/game_over, 停
+                # 但 paused 已经在 K_P 时 pause() 了, 这里只处理 level_complete/game_over
+                if current_state_str in (State.LEVEL_COMPLETE, State.GAME_OVER):
+                    self.music.stop()
+            self._last_bgm_state = current_state_str
 
     def draw(self):
         if self.state == State.MENU:

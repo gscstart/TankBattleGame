@@ -30,7 +30,7 @@ def draw_menu(surface: pygame.Surface, t: float = 0.0, num_players: int = 1):
 
     # 操作说明 (i18n)
     prefix = "menu.controls.2p" if num_players == 2 else "menu.controls.1p"
-    lines = [i18n.t(f"{prefix}.{i}") for i in range(5)]
+    lines = [i18n.t(f"{prefix}.{i}") for i in range(6)]
     for i, line in enumerate(lines):
         text = small_font.render(line, True, C.MENU_DARK)
         surface.blit(text, (SCREEN_W // 2 - text.get_width() // 2,

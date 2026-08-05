@@ -155,3 +155,10 @@ SPECIAL_COLORS = {
     "rocket":  (220, 200, 60),  # 亮黄 - 火箭
     "bounce":  (200, 80, 200),  # 亮紫 - 弹跳
 }
+
+# F20: 背景音乐 (路线图 §6 阶段 D)
+# 程序生成的 8-bit chiptune BGM, 0 版权风险
+# 3 段: menu (轻松) / game (紧张) / victory (欢快)
+MUSIC_ENABLED = True           # 总开关 (K_M 切)
+MUSIC_VOLUME = 0.35            # 默认音量 (0.0 - 1.0, 不超过 0.5 避免吵)
+MUSIC_SAMPLE_RATE = 22050      # 8-bit 风格 (降低内存 + 复古音色)
