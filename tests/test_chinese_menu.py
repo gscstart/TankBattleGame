@@ -17,31 +17,31 @@ from game.hud import draw_hud
 # 主菜单
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 draw_menu(screen, 0.0)
-pygame.image.save(screen, "cn_menu.png")
+pygame.image.save(screen, "tests/screenshots/cn_menu.png")
 print("saved cn_menu.png")
 
 # 暂停画面（先清屏模拟游戏中）
 screen.fill((0, 0, 0))
 draw_pause(screen)
-pygame.image.save(screen, "cn_paused.png")
+pygame.image.save(screen, "tests/screenshots/cn_paused.png")
 print("saved cn_paused.png")
 
 # 关卡完成
 screen.fill((0, 0, 0))
 draw_level_complete(screen, 0, 1200, 0.0)
-pygame.image.save(screen, "cn_level_complete.png")
+pygame.image.save(screen, "tests/screenshots/cn_level_complete.png")
 print("saved cn_level_complete.png")
 
 # 游戏失败
 screen.fill((0, 0, 0))
 draw_game_over(screen, 500, victory=False, t=0.0)
-pygame.image.save(screen, "cn_gameover.png")
+pygame.image.save(screen, "tests/screenshots/cn_gameover.png")
 print("saved cn_gameover.png")
 
 # 胜利
 screen.fill((0, 0, 0))
 draw_game_over(screen, 3000, victory=True, t=0.0)
-pygame.image.save(screen, "cn_victory.png")
+pygame.image.save(screen, "tests/screenshots/cn_victory.png")
 print("saved cn_victory.png")
 
 pygame.quit()

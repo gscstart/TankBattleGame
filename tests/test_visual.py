@@ -57,7 +57,7 @@ draw_tank(screen, player_rect, Dir.UP, (220, 200, 80), (140, 120, 40))
 # 画闪光
 for e in effects:
     e.draw(screen)
-pygame.image.save(screen, "visual_muzzle_flash.png")
+pygame.image.save(screen, "tests/screenshots/visual_muzzle_flash.png")
 print("  saved visual_muzzle_flash.png")
 
 # --- 图 2：子弹拖尾 ---
@@ -74,7 +74,7 @@ level.draw(screen)
 # 覆盖 HUD
 from game.hud import draw_hud
 draw_hud(screen, 3, 0, 0, 15)
-pygame.image.save(screen, "visual_bullet_trail.png")
+pygame.image.save(screen, "tests/screenshots/visual_bullet_trail.png")
 print(f"  saved visual_bullet_trail.png (bullets: {len(level.bullets)}, "
       f"trail len: {len(level.bullets[0].trail) if level.bullets else 0})")
 
@@ -90,7 +90,7 @@ for _ in range(3):
 # 画
 level2.draw(screen)
 draw_hud(screen, 3, 0, 0, 15)
-pygame.image.save(screen, "visual_explosion.png")
+pygame.image.save(screen, "tests/screenshots/visual_explosion.png")
 print(f"  saved visual_explosion.png (particles: {len(level2.effects[0].particles) if level2.effects else 0})")
 
 # --- 图 4：完整关卡中的移动 + 开火 ---
@@ -113,7 +113,7 @@ for i in range(int(FPS * 2)):
     level3.update(1.0 / FPS)
 level3.draw(screen)
 draw_hud(screen, level3.lives, level3.score, level3.index, level3.enemies_to_spawn + len(level3.enemies))
-pygame.image.save(screen, "visual_full_scene.png")
+pygame.image.save(screen, "tests/screenshots/visual_full_scene.png")
 print(f"  saved visual_full_scene.png (effects: {len(level3.effects)}, "
       f"enemies: {len(level3.enemies)}, bullets: {len(level3.bullets)})")
 
@@ -127,7 +127,7 @@ for i in range(20):
     level4.players[0].update(1.0 / FPS, level4.tilemap, [], level4.bullets)
 level4.draw(screen)
 draw_hud(screen, 3, 0, 0, 15)
-pygame.image.save(screen, "visual_treads.png")
+pygame.image.save(screen, "tests/screenshots/visual_treads.png")
 print(f"  saved visual_treads.png (tread_phase: {level4.players[0].tread_phase:.1f})")
 
 # --- 图 6：方向变向的瞬间（软吸附）---
@@ -146,7 +146,7 @@ print(f"  snap_axis: {level5.players[0].snap_axis}, "
       f"x: {level5.players[0].rect.x}")
 level5.draw(screen)
 draw_hud(screen, 3, 0, 0, 15)
-pygame.image.save(screen, "visual_snap_midway.png")
+pygame.image.save(screen, "tests/screenshots/visual_snap_midway.png")
 print("  saved visual_snap_midway.png")
 
 print("\nAll visual screenshots generated")

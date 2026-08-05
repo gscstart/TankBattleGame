@@ -46,7 +46,7 @@ for i in range(total_frames):
     pygame.display.flip()
 
 # 保存截图
-pygame.image.save(g.screen, "screenshot_level1.png")
+pygame.image.save(g.screen, "tests/screenshots/screenshot_level1.png")
 print(f"Saved screenshot_level1.png ({SCREEN_W}x{SCREEN_H})")
 print(f"After 5s: score={g.score}, lives={g.lives}, enemies_left={g.level.enemies_to_spawn + len(g.level.enemies)}")
 print(f"  state={g.state}, level_index={g.level_index}")
@@ -57,7 +57,7 @@ print(f"  bullets={len(g.level.bullets)}, enemies={len(g.level.enemies)}")
 g.state = "menu"
 g.menu_t = 0.5
 g.draw()
-pygame.image.save(g.screen, "screenshot_menu.png")
+pygame.image.save(g.screen, "tests/screenshots/screenshot_menu.png")
 print("Saved screenshot_menu.png")
 
 # 截一张暂停图
@@ -65,21 +65,21 @@ g.start_game()
 g.update(0.1)
 g.state = "paused"
 g.draw()
-pygame.image.save(g.screen, "screenshot_paused.png")
+pygame.image.save(g.screen, "tests/screenshots/screenshot_paused.png")
 print("Saved screenshot_paused.png")
 
 # 截一张 GAME OVER 图
 g.state = "game_over"
 g.menu_t = 1.0
 g.draw()
-pygame.image.save(g.screen, "screenshot_gameover.png")
+pygame.image.save(g.screen, "tests/screenshots/screenshot_gameover.png")
 print("Saved screenshot_gameover.png")
 
 # 截一张胜利图
 g.state = "victory"
 g.menu_t = 0.5
 g.draw()
-pygame.image.save(g.screen, "screenshot_victory.png")
+pygame.image.save(g.screen, "tests/screenshots/screenshot_victory.png")
 print("Saved screenshot_victory.png")
 
 print("\nAll gameplay simulation completed without crash")
