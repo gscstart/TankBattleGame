@@ -16,8 +16,8 @@ from game.level import Level
 # ---- 配置层 ----
 
 def test_total_levels_is_7():
-    """C2: 现在 8 关 (6 campaign + 关 7 survival + 关 8 BOSS)."""
-    assert get_total_levels() == 8
+    """C4: 现在 15 关 (12 campaign + 关 7/13 survival + 关 8/14/15 BOSS)."""
+    assert get_total_levels() == 15
 
 
 def test_level_7_is_survival_layout():
@@ -111,7 +111,8 @@ def test_next_level_6_to_7_not_victory():
 
 
 def test_next_level_8_completes_to_victory(monkeypatch):
-    """C2: 关 8 BOSS 通关后 next_level 触发 VICTORY (关 7 survival 不再直接 VICTORY)."""
+    """C4: 最后一关 (关 15 BOSS) 通关后 next_level 触发 VICTORY.
+    中间关 (关 8 BOSS) 通关后 next_level 进关 9 campaign (不 VICTORY)."""
     import os
     from utils import highscores
     tmp = "tests/.tmp_next_level_8_hs.json"
@@ -120,14 +121,38 @@ def test_next_level_8_completes_to_victory(monkeypatch):
     monkeypatch.setattr(highscores, "DEFAULT_PATH", tmp)
     try:
         g = _make_game()
-        g.level_index = 7  # 0-based, 在关 8 BOSS 上
+        g.level_index = 14  # 0-based, 最后一关 (关 15 BOSS)
+        g.lives = 3
+        g.score = 5000
+        g.next_level()
+        assert g.level_index == 15
+        assert g.state == "victory"
+        # VICTORY 状态 self.level 被置 None（next_level 没创建新关）
+        assert g.level is None
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
+def test_next_level_8_advances_to_9(monkeypatch):
+    """C4 regression: 关 8 BOSS 通关后 next_level 进关 9 campaign (非 VICTORY)."""
+    import os
+    from utils import highscores
+    tmp = "tests/.tmp_next_level_8_to_9.json"
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    monkeypatch.setattr(highscores, "DEFAULT_PATH", tmp)
+    try:
+        g = _make_game()
+        g.level_index = 7  # 0-based, 关 8 BOSS
         g.lives = 3
         g.score = 5000
         g.next_level()
         assert g.level_index == 8
-        assert g.state == "victory"
-        # VICTORY 状态 self.level 被置 None（next_level 没创建新关）
-        assert g.level is None
+        assert g.state == "playing"
+        assert g.level is not None
+        assert g.level.index == 8  # 关 9 (0-based 8)
+        assert g.level.mode == "campaign"  # 关 9 是 campaign
     finally:
         if os.path.exists(tmp):
             os.remove(tmp)

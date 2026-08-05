@@ -117,7 +117,17 @@ LEVEL_DIFFICULTY = [
     {"enemy_count": 20, "max_on_screen": 4, "enemy_speed": 84,  "spawn_interval": 1.5},  # 关 5
     {"enemy_count": 25, "max_on_screen": 5, "enemy_speed": 90,  "spawn_interval": 1.2},  # 关 6
     {"mode": "survival", "max_on_screen": 5, "enemy_speed": 96,  "spawn_interval": 0.8},  # 关 7 生存模式
-    {"mode": "boss", "boss_count": 1},  # 关 8 BOSS 关卡
+    {"mode": "boss", "boss_count": 1, "enemy_speed": 60},  # 关 8 BOSS 关卡 (enemy_speed 占位, BOSS 用 BOSS_SPEED)
+    # C4: 关 9-12 常规关 (4 个新布局, 难度递增)
+    {"enemy_count": 28, "max_on_screen": 4, "enemy_speed": 84,  "spawn_interval": 1.5},  # 关 9 冰面
+    {"enemy_count": 30, "max_on_screen": 4, "enemy_speed": 88,  "spawn_interval": 1.4},  # 关 10 密室
+    {"enemy_count": 32, "max_on_screen": 4, "enemy_speed": 90,  "spawn_interval": 1.3},  # 关 11 钢墙
+    {"enemy_count": 35, "max_on_screen": 5, "enemy_speed": 92,  "spawn_interval": 1.1},  # 关 12 终极常规
+    # C4: 关 13 生存 II (节奏更紧张)
+    {"mode": "survival", "max_on_screen": 6, "enemy_speed": 102, "spawn_interval": 0.6},  # 关 13 生存 II
+    # C4: 关 14-15 BOSS 关 (2 个新 BOSS 房)
+    {"mode": "boss", "boss_count": 1, "enemy_speed": 60},  # 关 14 BOSS II (钢墙保护)
+    {"mode": "boss", "boss_count": 1, "enemy_speed": 60},  # 关 15 终极 BOSS
 ]
 
 # C2: BOSS 关卡常量 (路线图 §7 风险点 - 暴露常量方便平衡)

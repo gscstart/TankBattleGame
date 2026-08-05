@@ -28,14 +28,15 @@ def _fake_event(type, key):
 
 # ---- 1. 关卡数据完整性 ----
 def test_level_data_integrity():
-    # C2: 现在 8 关 (6 关 campaign + 关 7 survival + 关 8 BOSS)
-    assert get_total_levels() == 8, f"8 levels, got {get_total_levels()}"
+    # C4: 现在 15 关 (12 campaign + 关 7/13 survival + 关 8/14/15 BOSS)
+    assert get_total_levels() == 15, f"15 levels, got {get_total_levels()}"
     for i, lvl in enumerate(LEVELS):
         assert len(lvl) == GRID_H, f"level {i+1}: {GRID_H} rows, got {len(lvl)}"
         for r, row in enumerate(lvl):
             assert len(row) == GRID_W, f"level {i+1} row {r}: {GRID_W} cols, got {len(row)}: {row!r}"
-        # 关 7 是 survival 模式，没有基地 (B3)
-        if i < 6:
+        # 关 1-6, 9-12 是 campaign, 有基地 X
+        # 关 7/13 survival 无基地, 关 8/14/15 BOSS 无基地
+        if i not in (6, 7, 12, 13, 14):  # 0-based: 6=关7 survival, 7=关8 boss, 12=关13, 13=关14, 14=关15
             assert any("X" in row for row in lvl), f"level {i+1}: has base 'X'"
         assert any("P" in row for row in lvl), f"level {i+1}: has player 'P'"
         tm = TileMap.from_layout(lvl)
@@ -44,20 +45,32 @@ def test_level_data_integrity():
 
 # ---- 2. 难度递增 ----
 def test_difficulty_progression():
-    # C2: 现在 8 关 (6 关 campaign + 关 7 survival + 关 8 BOSS, survival/boss 不参与递增)
-    assert len(LEVEL_DIFFICULTY) == 8, f"8 difficulty levels, got {len(LEVEL_DIFFICULTY)}"
-    # 只对 campaign 6 关检查 enemy_count 递增
-    for i in range(1, 6):
+    # C4: 现在 15 关 (12 campaign + 关 7/13 survival + 关 8/14/15 BOSS)
+    assert len(LEVEL_DIFFICULTY) == 15, f"15 difficulty levels, got {len(LEVEL_DIFFICULTY)}"
+    # 只对 campaign 12 关检查 enemy_count 递增 (排除 6=关7surv, 7=关8boss, 12=关13surv, 13=关14boss, 14=关15boss)
+    campaign_indices = [i for i in range(15) if i not in (6, 7, 12, 13, 14)]
+    for j in range(1, len(campaign_indices)):
+        prev_i = campaign_indices[j - 1]
+        cur_i = campaign_indices[j]
+        prev = LEVEL_DIFFICULTY[prev_i]
+        cur = LEVEL_DIFFICULTY[cur_i]
+        assert cur["enemy_count"] >= prev["enemy_count"], \
+            f"campaign level {cur_i+1} enemy_count >= previous ({prev_i+1}): {cur['enemy_count']} >= {prev['enemy_count']}"
+    # 关 1-3 速度相同, 4 起递增
+    for i in range(3, 6):  # 关 4-6
         prev = LEVEL_DIFFICULTY[i - 1]
         cur = LEVEL_DIFFICULTY[i]
-        assert cur["enemy_count"] >= prev["enemy_count"], \
-            f"level {i+1} enemy_count >= previous: {cur['enemy_count']} >= {prev['enemy_count']}"
-        if i >= 3:
-            assert cur["enemy_speed"] > prev["enemy_speed"], \
-                f"level {i+1} enemy_speed > previous: {cur['enemy_speed']} > {prev['enemy_speed']}"
-    # survival 关 enemy_speed 应 >= 关 6 campaign
-    assert LEVEL_DIFFICULTY[6]["enemy_speed"] >= LEVEL_DIFFICULTY[5]["enemy_speed"], \
-        "survival should be at least as fast as final campaign"
+        assert cur["enemy_speed"] > prev["enemy_speed"], \
+            f"level {i+1} enemy_speed > previous: {cur['enemy_speed']} > {prev['enemy_speed']}"
+    # 关 9-12 (C4) 速度递增
+    for i in range(8, 12):  # 0-based 8=关9, 11=关12
+        prev = LEVEL_DIFFICULTY[i - 1]
+        cur = LEVEL_DIFFICULTY[i]
+        assert cur["enemy_speed"] > prev["enemy_speed"], \
+            f"level {i+1} enemy_speed > previous: {cur['enemy_speed']} > {prev['enemy_speed']}"
+    # 关 13 survival 速度 >= 关 12
+    assert LEVEL_DIFFICULTY[12]["enemy_speed"] >= LEVEL_DIFFICULTY[11]["enemy_speed"], \
+        "survival 13 should be at least as fast as final campaign 12"
 
 
 # ---- 3. 道具系统 ----
