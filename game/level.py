@@ -85,7 +85,6 @@ class Level:
         # C2: BOSS 关卡 - 在 (8, 7) 中央 spawn BossTank (5x5 BOSS 房间)
         if self.mode == "boss":
             from entities.boss import BossTank
-            from settings import TILE as _TILE
             boss_x, boss_y = self.tilemap.grid_to_world(8, 7)
             boss = BossTank(boss_x, boss_y)
             self.enemies.append(boss)
