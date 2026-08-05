@@ -16,15 +16,16 @@ Bullet 配套改造 (entities/bullet.py):
 - bounces_left: 弹跳剩余次数
 - speed_multiplier: 子弹速度倍率 (火箭 2.0)
 """
-import math
+import random
 import pygame
 from settings import (
     SPECIAL_COLORS, SUICIDE_BLAST_TRIGGER_RADIUS, SUICIDE_BLAST_DAMAGE_RADIUS,
     STEALTH_CYCLE, STEALTH_VISIBLE_FRAC, ARMOR_HP, ROCKET_SPEED_MULT, BOUNCE_COUNT,
 )
 from entities.enemy import EnemyTank
-from entities.bullet import Bullet
+from entities.effects import Explosion
 from utils import events
+from utils.sound import play
 
 
 def _make_dark(color):
@@ -81,10 +82,8 @@ class SuicideEnemy(EnemyTank):
                 other.hit_flash_time = 0.3
         # 大爆炸视觉
         if effects is not None:
-            from entities.effects import Explosion
             effects.append(Explosion(cx, cy, big=True))
         # 音效
-        from utils.sound import play
         play("explosion")
         # 事件 (自己发一次, owner=powerup 表示"被自爆者波及", 不计分)
         events.publish(events.ENTITY_KILLED, kind="enemy", owner="powerup",
@@ -102,13 +101,7 @@ class StealthEnemy(EnemyTank):
         # 强制覆盖颜色 (避免被 tier/is_powerup_carrier 覆盖)
         self.color = color
         self.dark_color = _make_dark(color)
-        # 显形/隐行状态
-        self.stealth_phase = 0.0
-        self._init_stealth_phase()
-
-    def _init_stealth_phase(self):
-        # 初始时随机相位, 避免一群隐形敌人同步显形
-        import random
+        # 显形/隐行状态 (初始随机相位, 避免一群隐形敌人同步显形)
         self.stealth_phase = random.uniform(0.0, STEALTH_CYCLE)
 
     @property

@@ -1,6 +1,6 @@
 """菜单和结束画面."""
 import pygame
-from settings import SCREEN_W, SCREEN_H, HUD_H
+from settings import SCREEN_W, SCREEN_H
 import utils.colors as C
 from game.hud import get_font
 import utils.i18n as i18n

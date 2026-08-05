@@ -10,7 +10,6 @@
 """
 import numpy as np
 import pygame
-import math
 
 from settings import MUSIC_SAMPLE_RATE, MUSIC_VOLUME, MUSIC_ENABLED
 

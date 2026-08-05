@@ -8,15 +8,19 @@
 """
 import random
 import pygame
-from settings import RESPAWN_INVULN, MAP_X, MAP_Y, TILE, SCORE_PER_ENEMY, PLAYER_LIVES
+from settings import (RESPAWN_INVULN, MAP_X, MAP_Y, TILE, SCORE_PER_ENEMY,
+                     PLAYER_LIVES, GRID_W, GRID_H)
 from settings import MAGNET_DURATION, LASER_DURATION, MINE_COUNT
 from settings import SPECIAL_ENEMY_CHANCE
 from world.tilemap import TileMap
 from world.levels import get_level, get_level_difficulty
 from entities.player import PlayerTank
 from entities.enemy import EnemyTank
+from entities.boss import BossTank
 from game.input import P1_INPUT, P2_INPUT
+from game.hud import get_font
 from utils import events
+from utils.sound import play
 
 
 # 每个道具拾取时播放的音效（语义匹配）
@@ -90,7 +94,6 @@ class Level:
         self._shovel_backup = None
         # C2: BOSS 关卡 - 在 (8, 7) 中央 spawn BossTank (5x5 BOSS 房间)
         if self.mode == "boss":
-            from entities.boss import BossTank
             boss_x, boss_y = self.tilemap.grid_to_world(8, 7)
             boss = BossTank(boss_x, boss_y)
             self.enemies.append(boss)
@@ -251,9 +254,7 @@ class Level:
                 self._restore_shovel()
 
         # 敌人生成 (boss 模式: BOSS 已 spawn 在 __init__, 不再生)
-        if self.mode == "boss":
-            pass  # boss 模式无 spawn 计时
-        else:
+        if self.mode != "boss":
             self._spawn_timer -= dt
             if self._spawn_timer <= 0:
                 spawned = self._spawn_enemy()
@@ -359,7 +360,6 @@ class Level:
                     self.score += SCORE_PER_ENEMY
                     self.enemies_killed += 1
                     # C5: BOSS 死时标记 is_boss=True 给成就系统
-                    from entities.boss import BossTank
                     is_boss = isinstance(e, BossTank)
                     events.publish(events.ENTITY_KILLED, kind="enemy", owner="player",
                                    x=e.rect.centerx, y=e.rect.centery,
@@ -408,13 +408,9 @@ class Level:
                 events.publish(events.BASE_DESTROYED)
                 self._fail(events.REASON_BASE_DESTROYED)
 
-        # C5: 成就系统 - 每帧 tick (survival 计时) + 事件分发
+        # C5: 成就系统 - 每帧 tick (survival 计时); events 已被 Manager 订阅
         if self.achievements is not None:
             self.achievements.on_level_tick(dt, self.mode)
-            # 分发本帧产生的 events 到成就 manager
-            # 注意: process_event 在 publish 时调, 这里直接调本帧累积的
-            # 简化: 让 manager 订阅 events.subscribe, 全局自动接收
-            #      但 process_event 已有幂等, 这里不需要再调
 
         # 通关条件:
         # - campaign: enemies_to_spawn 用完 + 无存活敌人
@@ -423,7 +419,6 @@ class Level:
         if not self.failed and not self.completed:
             if self.mode == "boss":
                 # BOSS 关: 所有 BossTank 都死才 completed
-                from entities.boss import BossTank
                 boss_alive = any(
                     isinstance(e, BossTank) and not e.dead
                     for e in self.enemies
@@ -515,7 +510,6 @@ class Level:
 
     def _restore_shovel(self):
         """恢复 shovel 备份。"""
-        from settings import GRID_W, GRID_H
         if self._shovel_backup is not None:
             for (c, r), tile in self._shovel_backup.items():
                 if 0 <= r < GRID_H and 0 <= c < GRID_W:
@@ -526,7 +520,6 @@ class Level:
     def _on_base_hit(self, tile):
         # 基地被命中时震屏
         self.screen_shake_time = 0.3
-        from utils.sound import play
         play("explosion")
         events.publish(events.BASE_HIT)
 
@@ -535,7 +528,6 @@ class Level:
         # 震屏偏移
         ox, oy = 0, 0
         if self.screen_shake_time > 0:
-            import random
             ox = random.randint(-2, 2)
             oy = random.randint(-2, 2)
         # 画到临时 surface 以支持偏移
@@ -566,7 +558,6 @@ class Level:
         for fx in self.effects:
             fx.draw(surface)
         # C1: 死亡重生提示 (任一玩家)
-        from game.hud import get_font
         for idx, p in enumerate(self.players):
             if p.dead and hasattr(self, f"_death_timer_p{idx}"):
                 font = get_font(20, True)

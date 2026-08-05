@@ -1,6 +1,6 @@
 """顶部 HUD。"""
 import pygame
-from settings import SCREEN_W, HUD_H, MAP_X, MAP_Y
+from settings import SCREEN_W, HUD_H
 import utils.colors as C
 from utils.i18n import t
 

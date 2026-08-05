@@ -5,7 +5,6 @@
 import math
 import random
 import pygame
-from settings import TANK_SIZE
 
 
 class MuzzleFlash:

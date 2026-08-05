@@ -13,7 +13,6 @@ from utils import achievements as ach
 from utils import replay as replay_mod
 from utils import music as music_mod
 import utils.i18n as i18n
-from utils.i18n import t
 from world.levels import LEVELS
 
 
@@ -37,7 +36,7 @@ class Game:
         self.events_buffer = []
         # 菜单/结束画面时间
         self.menu_t = 0.0
-        # 菜单子视图：'main' / 'highscores'
+        # 菜单子视图：'main' / 'highscores' / 'achievements' / 'replays'
         self.menu_view = 'main'
         # 通关上榜后的提示（VICTORY 状态下显示用）
         self.highscore_rank = -1  # -1 表示未上榜
@@ -280,9 +279,7 @@ class Game:
         self.state_time += dt
         if self.state == State.MENU:
             self.menu_t += dt
-            if self.menu_view == 'highscores':
-                # 排行榜视图不需要 update
-                pass
+            # 菜单视图 (main/highscores/achievements/replays) 都不需要 update
         elif self.state == State.PLAYING:
             if self.level:
                 # C6: 重放模式 - 覆盖 player.keys
@@ -378,7 +375,7 @@ class Game:
                 if (self.level and self.level.mode == "survival"
                         and self.highscore_rank >= 0):
                     hs_text = get_font(20).render(
-                        t("menu.survival.rank_hint", rank=self.highscore_rank + 1),
+                        i18n.t("menu.survival.rank_hint", rank=self.highscore_rank + 1),
                         True, (255, 220, 100)
                     )
                     self.screen.blit(hs_text,
@@ -389,7 +386,7 @@ class Game:
                 # 上榜提示
                 if self.highscore_rank >= 0:
                     hs_text = get_font(20).render(
-                        t("menu.victory.rank_hint", rank=self.highscore_rank + 1),
+                        i18n.t("menu.victory.rank_hint", rank=self.highscore_rank + 1),
                         True, (255, 220, 100)
                     )
                     self.screen.blit(hs_text,

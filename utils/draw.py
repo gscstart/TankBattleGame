@@ -1,7 +1,5 @@
 """纯代码绘制所有视觉元素。坦克、子弹、瓦片都在这里。"""
 import pygame
-import math
-from settings import TILE, TANK_SIZE, BULLET_SIZE, ENEMY_TIER_COLORS
 import utils.colors as C
 
 

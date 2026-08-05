@@ -6,7 +6,7 @@
 - 惯性滑行：松开方向键后，坦克继续沿最后方向移动一小段时间
 """
 import pygame
-from settings import Dir, PLAYER_SPEED, PLAYER_FIRE_COOLDOWN, RESPAWN_INVULN, TILE
+from settings import Dir, PLAYER_SPEED, PLAYER_FIRE_COOLDOWN, TILE
 from entities.tank import Tank
 from game.input import P1_INPUT
 import utils.colors as C
@@ -99,10 +99,10 @@ class PlayerTank(Tank):
             self.snap_axis = None  # 冰面不吸附, 清残留
         # B5: 检测当前是否在冰面 TileIce 上 (用中心点)
         from world.tile import TileIce
-        from settings import MAP_X as _MAP_X, MAP_Y as _MAP_Y, GRID_W, GRID_H
+        from settings import MAP_X, MAP_Y, GRID_W, GRID_H
         cx, cy = self.rect.centerx, self.rect.centery
-        gx = (cx - _MAP_X) // TILE
-        gy = (cy - _MAP_Y) // TILE
+        gx = (cx - MAP_X) // TILE
+        gy = (cy - MAP_Y) // TILE
         if 0 <= gx < GRID_W and 0 <= gy < GRID_H:
             self.on_ice = isinstance(tilemap.tiles[gy][gx], TileIce)
         else:

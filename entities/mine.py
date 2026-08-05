@@ -111,7 +111,6 @@ def spawn_mines_around(player, count: int = 3) -> list:
     count=3: 前 1, 中 (玩家当前格), 后 1.
     count=1: 仅玩家当前格.
     """
-    from settings import TILE
     cx, cy = player.rect.centerx, player.rect.centery
     dx, dy = player.dir
     mines = []

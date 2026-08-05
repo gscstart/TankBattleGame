@@ -1,5 +1,4 @@
 """坦克大战游戏全局常量。"""
-from enum import Enum
 
 # 屏幕尺寸
 SCREEN_W = 832

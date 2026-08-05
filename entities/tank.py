@@ -1,7 +1,6 @@
 """坦克基类。"""
 import pygame
-import math
-from settings import TANK_SIZE, MAP_X, MAP_Y, GRID_W, GRID_H, TILE, Dir
+from settings import TANK_SIZE, MAP_X, MAP_Y, GRID_W, GRID_H, TILE
 
 
 def snap_to_grid(value: int, size: int = TANK_SIZE) -> int:

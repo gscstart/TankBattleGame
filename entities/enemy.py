@@ -7,7 +7,6 @@
 - 红闪敌人（powerup carrier）：视觉红闪 + 被击杀时 100% 掉道具
 """
 import random
-import pygame
 from settings import (
     Dir, ENEMY_SPEED, ENEMY_FIRE_COOLDOWN_MIN, ENEMY_FIRE_COOLDOWN_MAX,
     ENEMY_TIER_COLORS, POWERUP_CARRIER_CHANCE, POWERUP_CARRIER_COLOR,
@@ -15,7 +14,6 @@ from settings import (
 )
 from entities.tank import Tank
 from utils.collision import line_of_sight
-import utils.colors as C
 
 
 # tier 行为参数

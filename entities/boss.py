@@ -13,12 +13,10 @@
 - 简单 AI: 朝最近玩家方向移动 + 1.5s 冷却开火
 - 触发关卡完成: level.update 检测 BOSS 全死 -> completed
 """
-import pygame
 from settings import (
-    BOSS_HP, BOSS_SPEED, BOSS_FIRE_COOLDOWN, BOSS_COLOR, Dir, TANK_SIZE,
+    BOSS_HP, BOSS_SPEED, BOSS_FIRE_COOLDOWN, BOSS_COLOR, Dir,
 )
 from entities.tank import Tank
-import utils.colors as C
 
 
 class BossTank(Tank):
