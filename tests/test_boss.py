@@ -228,3 +228,34 @@ def test_boss_level_no_normal_enemies():
     assert len(non_boss) == 0
     # enemies_to_spawn 应为 0
     assert lv.enemies_to_spawn == 0
+
+
+def test_boss_update_signature_matches_enemy():
+    """review fix: BOSS.update 签名跟 EnemyTank 对齐, 不然 level.py 通用调用会 crash.
+
+    BossTank.update 跟 EnemyTank.update 第 5 个位置参数都是 player
+    (BOSS 不直接用 player, 但保留签名一致避免 level.py 误传).
+    """
+    import inspect
+    boss_sig = inspect.signature(BossTank.update)
+    enemy_sig = inspect.signature(EnemyTank.update)
+    boss_params = list(boss_sig.parameters.keys())
+    enemy_params = list(enemy_sig.parameters.keys())
+    # 前 5 个参数名应该一致 (self, dt, tilemap, other_tanks, bullets, player)
+    assert boss_params[:6] == enemy_params[:6], \
+        f"BossTank.update 签名 {boss_params[:6]} 应跟 EnemyTank {enemy_params[:6]} 对齐"
+
+
+def test_boss_full_update_loop_does_not_crash():
+    """regression: 完整 BOSS update loop 不抛 TypeError (C2 review 漏掉, 因 BOSS dead 早退).
+
+    跑 60 帧 (1 秒) 看 BOSS 真活着时 update 正常, 玩家也能正常 update.
+    """
+    lv = Level(7, lives=PLAYER_LIVES, score=0)
+    boss = next(e for e in lv.enemies if isinstance(e, BossTank))
+    # BOSS 必须活着 (避免 if dead: return 早退)
+    assert not boss.dead
+    # 跑 60 帧不抛错
+    tilemap = lv.tilemap
+    for _ in range(60):
+        lv.update(0.01)

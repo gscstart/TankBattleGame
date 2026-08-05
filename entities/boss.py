@@ -42,12 +42,13 @@ class BossTank(Tank):
         # level.update 末尾 publish ENTITY_KILLED 用, 默认 False (与 EnemyTank 一致)
         self.is_powerup_carrier = False
 
-    def update(self, dt, tilemap, other_tanks, bullets, effects=None,
-               base_pos=None, target_priority="player"):
+    def update(self, dt, tilemap, other_tanks, bullets, player,
+               effects=None, base_pos=None, target_priority="player"):
         """BOSS 简化 AI: 周期性朝 dir 方向开火 + 缓慢直线移动.
 
         BOSS 不做方向智能 (不像 EnemyTank 用 _choose_target_dir),
         简化: 默认 dir 不变, 玩家可以预测子弹方向.
+        签名跟 EnemyTank 对齐 (player 第 5 位), 让 level.py 通用调用.
         """
         if self.dead:
             return
