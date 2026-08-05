@@ -6,9 +6,11 @@ from settings import (State, SCREEN_W, SCREEN_H, FPS, PLAYER_LIVES,
 from game.level import Level
 from game.hud import draw_hud, get_font
 from game.menu import (draw_menu, draw_pause, draw_level_complete,
-                       draw_game_over, draw_highscores, draw_achievements)
+                       draw_game_over, draw_highscores, draw_achievements,
+                       draw_replay_list)
 from utils import highscores
 from utils import achievements as ach
+from utils import replay as replay_mod
 import utils.i18n as i18n
 from utils.i18n import t
 from world.levels import LEVELS
@@ -40,6 +42,13 @@ class Game:
         self.highscore_rank = -1  # -1 表示未上榜
         # C5: 成就系统
         self.achievements = ach.Manager()
+        # C6: 回放/录像
+        self.replay_mode: bool = False       # True 表示当前在重放 (而非真实游玩)
+        self.replay_recorder = replay_mod.Recorder(level_index=0, num_players=self.num_players)
+        self.replay_player: replay_mod.Player | None = None
+        self.replay_frame_idx: int = 0       # 当前播放到第几帧
+        self.replay_list: list = []           # 菜单回放列表缓存
+        self.replay_selected_idx: int = 0    # 菜单选中索引
 
     def run(self):
         last = time.time()
@@ -89,6 +98,12 @@ class Game:
                             # C5: 切到成就视图
                             self.menu_view = 'achievements'
                             self.menu_t = 0.0
+                        elif event.key == pygame.K_r:
+                            # C6: 切到回放列表
+                            self.replay_list = replay_mod.list_replays()
+                            self.replay_selected_idx = 0
+                            self.menu_view = 'replays'
+                            self.menu_t = 0.0
                         elif event.key == pygame.K_l:
                             # B6: 切换语言 zh <-> en
                             i18n.set_lang("en" if i18n.get_lang() == "zh" else "zh")
@@ -102,10 +117,45 @@ class Game:
                             # 返回主菜单
                             self.menu_view = 'main'
                             self.menu_t = 0.0
+                    elif self.menu_view == 'replays':
+                        if event.key in (pygame.K_r, pygame.K_ESCAPE):
+                            # 返回主菜单
+                            self.menu_view = 'main'
+                            self.menu_t = 0.0
+                        elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                            # 选中当前回放
+                            if self.replay_list:
+                                rp = self.replay_list[self.replay_selected_idx]
+                                if self.start_replay(rp["path"]):
+                                    self.menu_view = 'main'  # 重放启动后到 PLAYING
+                        elif event.key in (pygame.K_UP, pygame.K_w):
+                            if self.replay_list:
+                                self.replay_selected_idx = max(0, self.replay_selected_idx - 1)
+                        elif event.key in (pygame.K_DOWN, pygame.K_s):
+                            if self.replay_list:
+                                self.replay_selected_idx = min(
+                                    len(self.replay_list) - 1, self.replay_selected_idx + 1)
+                        elif event.key == pygame.K_DELETE:
+                            if self.replay_list:
+                                rp = self.replay_list[self.replay_selected_idx]
+                                replay_mod.delete_replay(rp["path"])
+                                self.replay_list = replay_mod.list_replays()
+                                self.replay_selected_idx = min(
+                                    self.replay_selected_idx,
+                                    max(0, len(self.replay_list) - 1))
             elif self.state == State.PLAYING:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     self.state = State.PAUSED
                     self.state_time = 0.0
+                    return
+                # C6: 重放模式时禁用真实键盘 (player.keys 由 ReplayPlayer 覆盖)
+                if self.replay_mode:
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                        # ESC 退出重放
+                        self.replay_mode = False
+                        self.replay_player = None
+                        self.state = State.MENU
+                        self.state_time = 0.0
                     return
                 if self.level and self.level.players:
                     for p in self.level.players:
@@ -127,9 +177,33 @@ class Game:
                            achievements=getattr(self, 'achievements', None))
         self.state = State.PLAYING
         self.state_time = 0.0
+        # C6: 启动录制 (replay_mode 时不录)
+        if not getattr(self, 'replay_mode', False):
+            self.replay_recorder = replay_mod.Recorder(
+                level_index=self.level_index, num_players=self.num_players)
+            self.replay_recorder.start()
 
     def restart(self):
         self.start_game()
+
+    def start_replay(self, replay_path: str):
+        """C6: 从回放文件启动游戏 (replay_mode=True)."""
+        rp = replay_mod.Player()
+        if not rp.load(replay_path):
+            return False
+        self.replay_mode = True
+        self.replay_player = rp
+        self.replay_frame_idx = 0
+        self.level_index = rp.level_index
+        self.score = 0
+        self.lives = PLAYER_LIVES
+        self.num_players = rp.num_players
+        self.level = Level(self.level_index, self.lives, self.score,
+                           num_players=self.num_players,
+                           achievements=getattr(self, 'achievements', None))
+        self.state = State.PLAYING
+        self.state_time = 0.0
+        return True
 
     def next_level(self):
         self.level_index += 1
@@ -168,6 +242,23 @@ class Game:
         except OSError:
             self.highscore_rank = -1
 
+    def _stop_recording(self, result: str):
+        """C6: 关卡结束/失败时停止录制. 普通模式自动保存, replay 模式不存."""
+        if self.replay_mode:
+            return
+        if not self.replay_recorder.is_recording() and not self.replay_recorder.frames:
+            return
+        self.replay_recorder.stop(final_score=self.score, result=result)
+        # 成功通关才存 (失败通常不想存)
+        if result == "completed":
+            try:
+                # 文件名: replay_L{n}_score{s}_{timestamp}
+                ts = time.strftime("%Y%m%d_%H%M%S")
+                name = f"replay_L{self.level_index + 1}_{self.score}_{ts}"
+                self.replay_recorder.save(name)
+            except OSError:
+                pass
+
     def update(self, dt: float):
         self.state_time += dt
         if self.state == State.MENU:
@@ -177,6 +268,17 @@ class Game:
                 pass
         elif self.state == State.PLAYING:
             if self.level:
+                # C6: 重放模式 - 覆盖 player.keys
+                if self.replay_mode and self.replay_player is not None:
+                    keys = self.replay_player.get_keys_at(self.replay_frame_idx)
+                    # 1 玩家模式覆盖 player[0]; 2 玩家模式简化只覆盖 [0] (C6 简化)
+                    if self.level.players:
+                        self.level.players[0].keys = dict(keys)
+                    self.replay_frame_idx += 1
+                # 录制模式 - 录每帧 player.keys
+                if not self.replay_mode and self.replay_recorder.is_recording():
+                    if self.level.players:
+                        self.replay_recorder.record_frame(self.level.players[0].keys)
                 self.level.update(dt)
                 # 同步 score 和 lives
                 self.score = self.level.score
@@ -185,8 +287,10 @@ class Game:
                     self.score += self.level_index * 1000
                     self.state = State.LEVEL_COMPLETE
                     self.state_time = 0.0
+                    self._stop_recording(result="completed")
                 elif self.level.failed:
                     self.state = State.GAME_OVER
+                    self._stop_recording(result="failed")
                     self.state_time = 0.0
                     # 生存模式失败也写榜 (B3: 接入 B2 排行榜)
                     if self.level.mode == "survival":
@@ -197,6 +301,10 @@ class Game:
                 self.next_level()
         elif self.state == State.GAME_OVER or self.state == State.VICTORY:
             self.menu_t += dt
+            # C6: 重放结束时清 replay_mode
+            if self.replay_mode:
+                self.replay_mode = False
+                self.replay_player = None
 
     def draw(self):
         if self.state == State.MENU:
@@ -206,6 +314,10 @@ class Game:
             elif self.menu_view == 'achievements':
                 # C5: 成就展示页
                 draw_achievements(self.screen, self.achievements, self.menu_t)
+            elif self.menu_view == 'replays':
+                # C6: 回放列表页
+                draw_replay_list(self.screen, self.replay_list,
+                                 self.replay_selected_idx, self.menu_t)
             else:
                 draw_menu(self.screen, self.menu_t, num_players=self.num_players)
         else:

@@ -161,3 +161,40 @@ def draw_achievements(surface: pygame.Surface, manager, t: float = 0.0):
     if int(t * 2) % 2 == 0:
         back = small_font.render(i18n.t("menu.achievements.back"), True, C.MENU_DARK)
         surface.blit(back, (SCREEN_W // 2 - back.get_width() // 2, SCREEN_H - 30))
+
+
+def draw_replay_list(surface: pygame.Surface, replays: list, selected_idx: int,
+                     t: float = 0.0):
+    """C6 回放列表页. replays: list_replays() 结果."""
+    surface.fill(C.MENU_BG)
+    title_font = get_font(40, True)
+    row_font = get_font(16)
+    small_font = get_font(13)
+    # 标题
+    title = title_font.render(i18n.t("menu.replays.title"), True, C.MENU_TITLE)
+    surface.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 30))
+    if not replays:
+        empty = row_font.render(i18n.t("menu.replays.empty"), True, C.MENU_HINT)
+        surface.blit(empty, (SCREEN_W // 2 - empty.get_width() // 2, SCREEN_H // 2))
+    else:
+        # 表头
+        header = small_font.render(i18n.t("menu.replays.header"), True, C.MENU_DARK)
+        surface.blit(header, (SCREEN_W // 2 - header.get_width() // 2, 100))
+        # 列表
+        for i, r in enumerate(replays):
+            color = C.MENU_TITLE if i == selected_idx else C.MENU_HINT
+            # 选中行高亮
+            if i == selected_idx:
+                pygame.draw.rect(surface, (60, 60, 100),
+                                 (40, 140 + i * 28 - 2, SCREEN_W - 80, 26))
+            row_str = i18n.t("menu.replays.row",
+                              level=r["level_index"] + 1,
+                              score=r["final_score"],
+                              frames=r["total_frames"],
+                              result=r["result"])
+            text = row_font.render(row_str, True, color)
+            surface.blit(text, (SCREEN_W // 2 - text.get_width() // 2, 140 + i * 28))
+    # 操作提示
+    if int(t * 2) % 2 == 0:
+        hint = small_font.render(i18n.t("menu.replays.hint"), True, C.MENU_DARK)
+        surface.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H - 30))
