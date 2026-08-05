@@ -120,3 +120,44 @@ def draw_highscores(surface: pygame.Surface, scores: list, t: float = 0.0):
     if int(t * 2) % 2 == 0:
         back = small_font.render(i18n.t("menu.highscores.back"), True, C.MENU_DARK)
         surface.blit(back, (SCREEN_W // 2 - back.get_width() // 2, SCREEN_H - 40))
+
+
+def draw_achievements(surface: pygame.Surface, manager, t: float = 0.0):
+    """C5 成就展示页. manager: achievements.Manager 实例."""
+    surface.fill(C.MENU_BG)
+    title_font = get_font(40, True)
+    name_font = get_font(18)
+    desc_font = get_font(13)
+    small_font = get_font(14)
+    # 标题
+    title = title_font.render(
+        i18n.t("menu.achievements.title",
+               unlocked=manager.unlocked_count(), total=manager.total_count()),
+        True, C.MENU_TITLE)
+    surface.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 30))
+    # 列表
+    from utils.achievements import ACHIEVEMENTS
+    for i, ach in enumerate(ACHIEVEMENTS):
+        unlocked = manager.is_unlocked(ach.id)
+        color = ach.icon_color if unlocked else (80, 80, 80)
+        y = 100 + i * 48
+        # 图标方块
+        pygame.draw.rect(surface, color, (60, y, 28, 28))
+        if not unlocked:
+            # 灰色未解锁 - 加把锁的"?"
+            qmark = name_font.render("?", True, (200, 200, 200))
+            surface.blit(qmark, (60 + 14 - qmark.get_width() // 2,
+                                 y + 14 - qmark.get_height() // 2))
+        # 名称
+        name_text = name_font.render(
+            i18n.t(ach.name_key), True,
+            C.MENU_HINT if unlocked else C.MENU_DARK)
+        surface.blit(name_text, (100, y))
+        # 描述
+        desc_text = desc_font.render(
+            i18n.t(ach.desc_key), True, C.MENU_DARK)
+        surface.blit(desc_text, (100, y + 22))
+    # 返回提示
+    if int(t * 2) % 2 == 0:
+        back = small_font.render(i18n.t("menu.achievements.back"), True, C.MENU_DARK)
+        surface.blit(back, (SCREEN_W // 2 - back.get_width() // 2, SCREEN_H - 30))

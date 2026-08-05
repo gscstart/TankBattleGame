@@ -6,8 +6,9 @@ from settings import (State, SCREEN_W, SCREEN_H, FPS, PLAYER_LIVES,
 from game.level import Level
 from game.hud import draw_hud, get_font
 from game.menu import (draw_menu, draw_pause, draw_level_complete,
-                       draw_game_over, draw_highscores)
+                       draw_game_over, draw_highscores, draw_achievements)
 from utils import highscores
+from utils import achievements as ach
 import utils.i18n as i18n
 from utils.i18n import t
 from world.levels import LEVELS
@@ -37,6 +38,8 @@ class Game:
         self.menu_view = 'main'
         # 通关上榜后的提示（VICTORY 状态下显示用）
         self.highscore_rank = -1  # -1 表示未上榜
+        # C5: 成就系统
+        self.achievements = ach.Manager()
 
     def run(self):
         last = time.time()
@@ -82,11 +85,20 @@ class Game:
                             # 切到排行榜视图
                             self.menu_view = 'highscores'
                             self.menu_t = 0.0
+                        elif event.key == pygame.K_a:
+                            # C5: 切到成就视图
+                            self.menu_view = 'achievements'
+                            self.menu_t = 0.0
                         elif event.key == pygame.K_l:
                             # B6: 切换语言 zh <-> en
                             i18n.set_lang("en" if i18n.get_lang() == "zh" else "zh")
                     elif self.menu_view == 'highscores':
                         if event.key in (pygame.K_h, pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
+                            # 返回主菜单
+                            self.menu_view = 'main'
+                            self.menu_t = 0.0
+                    elif self.menu_view == 'achievements':
+                        if event.key in (pygame.K_a, pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
                             # 返回主菜单
                             self.menu_view = 'main'
                             self.menu_t = 0.0
@@ -111,7 +123,8 @@ class Game:
         self.score = 0
         self.lives = PLAYER_LIVES
         self.level = Level(self.level_index, self.lives, self.score,
-                           num_players=self.num_players)
+                           num_players=self.num_players,
+                           achievements=getattr(self, 'achievements', None))
         self.state = State.PLAYING
         self.state_time = 0.0
 
@@ -126,10 +139,17 @@ class Game:
             self.state_time = 0.0
             # 通关联机尝试上榜（B2 排行榜）
             self._record_highscore()
+            # C5: 保存成就进度
+            try:
+                if hasattr(self, 'achievements') and self.achievements is not None:
+                    self.achievements.save()
+            except OSError:
+                pass
             return
         # 关卡完成保留当前 score 和 lives
         self.level = Level(self.level_index, self.lives, self.score,
-                           num_players=self.num_players)
+                           num_players=self.num_players,
+                           achievements=getattr(self, 'achievements', None))
         self.state = State.PLAYING
         self.state_time = 0.0
 
@@ -183,6 +203,9 @@ class Game:
             if self.menu_view == 'highscores':
                 scores = highscores.load_highscores()
                 draw_highscores(self.screen, scores, self.menu_t)
+            elif self.menu_view == 'achievements':
+                # C5: 成就展示页
+                draw_achievements(self.screen, self.achievements, self.menu_t)
             else:
                 draw_menu(self.screen, self.menu_t, num_players=self.num_players)
         else:

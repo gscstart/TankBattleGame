@@ -42,7 +42,8 @@ class Level:
     每玩家各自维护 .lives 属性.
     """
 
-    def __init__(self, level_index: int, lives: int, score: int, num_players: int = 1):
+    def __init__(self, level_index: int, lives: int, score: int, num_players: int = 1,
+                 achievements=None):
         self.index = level_index
         # 玩家生命用 list 维护: 每玩家 3 命, 独立计数
         # lives 参数保留向后兼容 (campaign 模式 1 玩家时 = PLAYER_LIVES)
@@ -53,6 +54,10 @@ class Level:
         self.config = get_level_difficulty(level_index)
         # 模式：'campaign'（默认 6 关） 或 'survival'（无尽波次）
         self.mode = self.config.get("mode", "campaign")
+        # C5: 成就管理器 (可选, 不传则不处理)
+        self.achievements = achievements
+        if self.achievements is not None:
+            self.achievements.on_level_start(self.mode)
         self.tilemap = TileMap.from_layout(get_level(level_index))
         # C1: 创建 num_players 个玩家, P1/P2 用各自 InputMap
         # 用循环 (而不是 list comprehension) 因为 _spawn_player(1) 需要 self.players[0]
@@ -353,10 +358,14 @@ class Level:
                 if not e.killed_by_powerup:
                     self.score += SCORE_PER_ENEMY
                     self.enemies_killed += 1
+                    # C5: BOSS 死时标记 is_boss=True 给成就系统
+                    from entities.boss import BossTank
+                    is_boss = isinstance(e, BossTank)
                     events.publish(events.ENTITY_KILLED, kind="enemy", owner="player",
                                    x=e.rect.centerx, y=e.rect.centery,
                                    score_delta=SCORE_PER_ENEMY,
-                                   is_powerup_carrier=e.is_powerup_carrier)
+                                   is_powerup_carrier=e.is_powerup_carrier,
+                                   is_boss=is_boss)
                 # 红闪敌人 100% 掉道具，普通敌人 25% 掉
                 if e.is_powerup_carrier or random.random() < 0.25:
                     from entities.powerup import spawn_random_powerup
@@ -398,6 +407,14 @@ class Level:
             if not self.failed:
                 events.publish(events.BASE_DESTROYED)
                 self._fail(events.REASON_BASE_DESTROYED)
+
+        # C5: 成就系统 - 每帧 tick (survival 计时) + 事件分发
+        if self.achievements is not None:
+            self.achievements.on_level_tick(dt, self.mode)
+            # 分发本帧产生的 events 到成就 manager
+            # 注意: process_event 在 publish 时调, 这里直接调本帧累积的
+            # 简化: 让 manager 订阅 events.subscribe, 全局自动接收
+            #      但 process_event 已有幂等, 这里不需要再调
 
         # 通关条件:
         # - campaign: enemies_to_spawn 用完 + 无存活敌人

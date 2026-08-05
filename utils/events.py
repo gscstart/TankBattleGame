@@ -18,6 +18,7 @@ BASE_HIT = "base.hit"                    # (no payload)
 BASE_DESTROYED = "base.destroyed"        # (no payload)
 LEVEL_COMPLETED = "level.completed"      # score: int, level_index: int
 LEVEL_FAILED = "level.failed"            # reason: 'base_destroyed'|'lives_zero'
+ACHIEVEMENT_UNLOCKED = "achievement.unlocked"  # id: str (成就 id)
 # LEVEL_FAILED.reason 取值常量
 REASON_BASE_DESTROYED = "base_destroyed"
 REASON_LIVES_ZERO = "lives_zero"
