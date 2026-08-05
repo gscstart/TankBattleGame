@@ -125,3 +125,23 @@ BOSS_HP = 10  # BOSS 血量
 BOSS_SPEED = 60  # BOSS 速度 (比普通敌人慢, 但能扛)
 BOSS_FIRE_COOLDOWN = 1.5  # BOSS 开火冷却 (秒)
 BOSS_COLOR = (180, 80, 200)  # 紫色, 区别于 tier 颜色
+
+# C3: 特殊敌人 5 种 (路线图 §6 阶段 C)
+# 普通敌人生成时, 概率替换为下列 5 种之一.
+SPECIAL_ENEMY_CHANCE = 0.15  # 15% 概率生成特殊敌人
+SUICIDE_BLAST_TRIGGER_RADIUS = 80   # 自爆触发半径 (像素, 距玩家)
+SUICIDE_BLAST_DAMAGE_RADIUS = 64    # 自爆伤害半径 (像素, 周围敌人)
+STEALTH_CYCLE = 2.0          # 隐形周期 (秒)
+STEALTH_VISIBLE_FRAC = 0.15  # 显形时长占比 (~0.3s)
+ARMOR_HP = 3                 # 装甲敌人血量
+ROCKET_SPEED_MULT = 2.0      # 火箭子弹速度倍率
+BOUNCE_COUNT = 1             # 弹跳子弹反弹次数
+
+# C3: 5 种特殊敌人颜色 (路线图 §6 阶段 C - 颜色显著区别于 tier)
+SPECIAL_COLORS = {
+    "suicide": (255, 100, 0),   # 橙 - 自爆
+    "stealth": (150, 150, 220), # 浅蓝紫 - 隐形
+    "armor":   (80, 80, 80),    # 深灰 - 装甲
+    "rocket":  (220, 200, 60),  # 亮黄 - 火箭
+    "bounce":  (200, 80, 200),  # 亮紫 - 弹跳
+}

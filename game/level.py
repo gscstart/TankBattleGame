@@ -10,6 +10,7 @@ import random
 import pygame
 from settings import RESPAWN_INVULN, MAP_X, MAP_Y, TILE, SCORE_PER_ENEMY, PLAYER_LIVES
 from settings import MAGNET_DURATION, LASER_DURATION, MINE_COUNT
+from settings import SPECIAL_ENEMY_CHANCE
 from world.tilemap import TileMap
 from world.levels import get_level, get_level_difficulty
 from entities.player import PlayerTank
@@ -151,8 +152,16 @@ class Level:
                 )
                 if not blocked:
                     tier = (self.enemies_killed) % 3
-                    enemy = EnemyTank(x, y, tier=tier,
-                                      enemy_speed=self.config["enemy_speed"])
+                    # C3: 普通 vs 特殊敌人 (campaign 模式才生成特殊)
+                    if self.mode == "campaign" and random.random() < SPECIAL_ENEMY_CHANCE:
+                        from entities.special import SPECIAL_ENEMY_CLASSES
+                        cls = random.choice(SPECIAL_ENEMY_CLASSES)
+                        enemy = cls(x, y, tier=tier,
+                                    enemy_speed=self.config["enemy_speed"],
+                                    is_powerup_carrier=False)
+                    else:
+                        enemy = EnemyTank(x, y, tier=tier,
+                                          enemy_speed=self.config["enemy_speed"])
                     self.enemies.append(enemy)
                     if self.mode == "survival":
                         self.survival_waves += 1

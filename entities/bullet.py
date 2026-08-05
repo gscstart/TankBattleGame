@@ -27,6 +27,9 @@ class Bullet:
         self.dead = False
         self.can_break_steel = False  # 默认不能破钢墙
         self.is_laser = False  # B4: 激光模式 - 穿透敌人不消失
+        # C3: 弹跳/加速
+        self.bounces_left = 0  # 撞墙反弹剩余次数
+        self.speed_multiplier = 1.0  # 子弹速度倍率 (火箭 2.0)
         # 拖尾：最近几帧的中心位置 [(x, y), ...]
         self.trail = []
 
@@ -38,8 +41,8 @@ class Bullet:
         if len(self.trail) > self.TRAIL_LEN:
             self.trail.pop(0)
 
-        # 飞行
-        speed = BULLET_SPEED
+        # 飞行 (C3: speed_multiplier 让火箭弹加速)
+        speed = BULLET_SPEED * self.speed_multiplier
         dx = self.direction[0] * speed * dt
         dy = self.direction[1] * speed * dt
         steps = max(1, int(max(abs(dx), abs(dy)) / 2) + 1)
@@ -48,15 +51,21 @@ class Bullet:
         for _ in range(steps):
             self.rect.x += step_dx
             self.rect.y += step_dy
-            # 地图边界
+            # 地图边界 (C3: 弹跳子弹反弹一次)
             if (self.rect.right < MAP_X or self.rect.left >= MAP_X + GRID_W * TILE
                     or self.rect.bottom < MAP_Y or self.rect.top >= MAP_Y + GRID_H * TILE):
+                if self.bounces_left > 0:
+                    self._bounce()
+                    continue
                 self._spawn_explosion(effects, scale=0.6)
                 self.dead = True
                 return
-            # 砖块
+            # 砖块 (C3: 弹跳子弹反弹一次)
             hits = tilemap.rect_hits_brick_subcell(self.rect)
             if hits:
+                if self.bounces_left > 0:
+                    self._bounce()
+                    continue
                 tile, c, r, sub = hits[0]
                 tile.on_bullet_hit(self, sub)
                 from utils.sound import play
@@ -64,10 +73,14 @@ class Bullet:
                 self._spawn_explosion(effects, scale=0.7)
                 self.dead = True
                 return
-            # 钢墙 / 基地
+            # 钢墙 / 基地 (C3: 弹跳子弹反弹一次, 但打基地仍算命中)
             hits2 = tilemap.rect_hits_steel_or_base(self.rect)
             if hits2:
                 tile, c, r = hits2[0]
+                if self.bounces_left > 0 and not isinstance(tile, TileBase):
+                    # C3: 钢墙/非基地反弹一次
+                    self._bounce()
+                    continue
                 if isinstance(tile, TileSteel) and self.can_break_steel:
                     # 玩家升级后能破钢墙：变回空地
                     tilemap.tiles[r][c] = TileEmpty()
@@ -106,6 +119,19 @@ class Bullet:
                         self.dead = True
                         return
                     break  # 一个 step 内只击中一个坦克
+
+    def _bounce(self):
+        """C3: 弹跳子弹反转方向，扣减剩余次数，修正位置避免卡墙."""
+        self.bounces_left -= 1
+        # 简化: 按当前方向取反 (单轴, 因为方向是 axis-aligned)
+        if self.direction[0] != 0:
+            self.direction = (-self.direction[0], 0)
+        else:
+            self.direction = (0, -self.direction[1])
+        # 修正回地图内 (避免卡在墙外)
+        bounds = pygame.Rect(MAP_X, MAP_Y, GRID_W * TILE, GRID_H * TILE)
+        if not bounds.contains(self.rect):
+            self.rect.clamp_ip(bounds)
 
     def _spawn_explosion(self, effects, scale=1.0, big=False):
         if effects is None:
