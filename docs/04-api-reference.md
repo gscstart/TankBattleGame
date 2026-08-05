@@ -15,25 +15,23 @@
 | `HUD_H` | 60 | 顶部 HUD 区高 |
 | `MAP_X` | 104 | 地图左上角 X（水平居中） |
 | `MAP_Y` | 60 | 地图左上角 Y（HUD 下方） |
-| `MAP_W` / `MAP_H` | 624 | 地图像素宽/高 |
-| `TILE` | 48 | 单瓦片边长（像素） |
-| `GRID_W` / `GRID_H` | 13 | 网格行列数 |
-| `MAP_PIXEL_W` / `MAP_PIXEL_H` | 624 | 地图像素 |
+| `TILE` | 36 | 单瓦片边长（**A 阶段是 48，C3 改为 36**） |
+| `GRID_W` / `GRID_H` | 17 | 网格行列数 |
+| `MAP_PIXEL_W` / `MAP_PIXEL_H` | 612 | 地图像素 |
 | `FPS` | 60 | 帧率上限 |
 
 ### 1.2 坦克 / 子弹
 
 | 常量 | 值 | 含义 |
 |------|----|------|
-| `TANK_SIZE` | 48 | 坦克边长（= TILE） |
+| `TANK_SIZE` | 36 | 坦克边长（= TILE） |
 | `TANK_SPEED` | 96 | 坦克默认速度 |
 | `PLAYER_SPEED` | 120 | 玩家速度 |
 | `ENEMY_SPEED` | 72 | 敌人基础速度（tier 2 × 1.25 = 90） |
-| `BULLET_SIZE` | 10 | 子弹边长 |
+| `BULLET_SIZE` | 8 | 子弹边长 |
 | `BULLET_SPEED` | 320 | 子弹速度（px/s） |
 | `PLAYER_FIRE_COOLDOWN` | 0.45 | 玩家开火间隔 |
-| `ENEMY_FIRE_COOLDOWN_MIN` | 0.8 | 敌人开火最小间隔 |
-| `ENEMY_FIRE_COOLDOWN_MAX` | 1.6 | 敌人开火最大间隔 |
+| `ENEMY_FIRE_COOLDOWN_MIN/MAX` | 0.8 / 1.6 | 敌人开火间隔 |
 
 ### 1.3 玩家 / 敌人 / 道具
 
@@ -43,13 +41,7 @@
 | `RESPAWN_INVULN` | 2.0 | 重生无敌时间（秒） |
 | `SCORE_PER_ENEMY` | 100 | 杀敌得分 |
 | `SCORE_PER_LEVEL` | 1000 | 通关得分（关索引 × 1000） |
-| `ENEMIES_PER_LEVEL` | 15 | 默认每关敌人数（被 LEVEL_DIFFICULTY 覆盖） |
-| `MAX_ENEMIES_ON_SCREEN` | 3 | 默认同屏上限（被 LEVEL_DIFFICULTY 覆盖） |
-| `ENEMY_SPAWN_INTERVAL` | 2.0 | 默认生成间隔（被 LEVEL_DIFFICULTY 覆盖） |
-| `ENEMY_SPAWN_X` | `[0, GRID_W//2, GRID_W-1] × TILE` | 默认敌人生成 X（实际未用，spawn 走 `tilemap.enemy_spawns`） |
-| `ENEMY_SPAWN_Y` | `TILE * 0` | 默认敌人生成 Y（实际未用） |
-| `PLAYER_SPAWN` | `(TILE*(GRID_W//2), TILE*(GRID_H-2))` | 玩家出生点（实际未用，走 `tilemap.player_spawn`） |
-| `BASE_GRID` | `(GRID_W//2, GRID_H-1)` | 基地默认网格（实际未用，走 `tilemap.base_pos`） |
+| `P2_ENABLED_DEFAULT` | True | **C1** 菜单默认进 2P 模式 |
 
 ### 1.4 状态
 
@@ -83,19 +75,77 @@ ENEMY_TIER_COLORS = [
     (220, 110, 110),  # 红 - tier 1
     (110, 200, 110),  # 绿 - tier 2
 ]
+POWERUP_CARRIER_COLOR = (255, 60, 60)  # **B1** 红闪敌人
 ```
 
-### 1.7 `LEVEL_DIFFICULTY` — 关卡难度表
+### 1.7 `LEVEL_DIFFICULTY` — 关卡难度表 (15 项)
 
 ```python
 LEVEL_DIFFICULTY = [
-    {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72, "spawn_interval": 2.0},  # 关 1
-    {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72, "spawn_interval": 2.0},  # 关 2
-    {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72, "spawn_interval": 2.0},  # 关 3
-    {"enemy_count": 18, "max_on_screen": 4, "enemy_speed": 78, "spawn_interval": 1.8},  # 关 4
-    {"enemy_count": 20, "max_on_screen": 4, "enemy_speed": 84, "spawn_interval": 1.5},  # 关 5
-    {"enemy_count": 25, "max_on_screen": 5, "enemy_speed": 90, "spawn_interval": 1.2},  # 关 6
+    {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72,  "spawn_interval": 2.0},  # 关 1
+    {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72,  "spawn_interval": 2.0},  # 关 2
+    {"enemy_count": 15, "max_on_screen": 3, "enemy_speed": 72,  "spawn_interval": 2.0},  # 关 3
+    {"enemy_count": 18, "max_on_screen": 4, "enemy_speed": 78,  "spawn_interval": 1.8},  # 关 4
+    {"enemy_count": 20, "max_on_screen": 4, "enemy_speed": 84,  "spawn_interval": 1.5},  # 关 5
+    {"enemy_count": 25, "max_on_screen": 5, "enemy_speed": 90,  "spawn_interval": 1.2},  # 关 6
+    {"mode": "survival", "max_on_screen": 5, "enemy_speed": 96,  "spawn_interval": 0.8},  # 关 7 B3
+    {"mode": "boss", "boss_count": 1, "enemy_speed": 60},  # 关 8 C2 BOSS
+    # C4 新增 4 关 campaign
+    {"enemy_count": 28, "max_on_screen": 4, "enemy_speed": 84,  "spawn_interval": 1.5},  # 关 9 冰面
+    {"enemy_count": 30, "max_on_screen": 4, "enemy_speed": 88,  "spawn_interval": 1.4},  # 关 10 密室
+    {"enemy_count": 32, "max_on_screen": 4, "enemy_speed": 90,  "spawn_interval": 1.3},  # 关 11 钢墙
+    {"enemy_count": 35, "max_on_screen": 5, "enemy_speed": 92,  "spawn_interval": 1.1},  # 关 12 终极常规
+    # C4 生存 II
+    {"mode": "survival", "max_on_screen": 6, "enemy_speed": 102, "spawn_interval": 0.6},  # 关 13
+    # C4 BOSS 关
+    {"mode": "boss", "boss_count": 1, "enemy_speed": 60},  # 关 14 BOSS II
+    {"mode": "boss", "boss_count": 1, "enemy_speed": 60},  # 关 15 终极 BOSS
 ]
+```
+
+### 1.8 道具时长 (B4)
+
+```python
+MAGNET_DURATION = 8.0      # 磁铁持续时间
+LASER_DURATION = 10.0      # 激光持续时间
+MINE_COUNT = 3             # 一次放几颗地雷
+MINE_BLAST_RADIUS = 100    # 地雷爆炸 AOE 像素范围
+MINE_BLAST_DAMAGE = True   # 地雷对敌人一击必杀
+```
+
+### 1.9 C2 BOSS 常量
+
+```python
+BOSS_HP = 10
+BOSS_SPEED = 60
+BOSS_FIRE_COOLDOWN = 1.5
+BOSS_COLOR = (180, 80, 200)  # 紫色
+```
+
+### 1.10 C3 特殊敌人
+
+```python
+SPECIAL_ENEMY_CHANCE = 0.15      # campaign 模式生成特殊敌人的概率
+SUICIDE_BLAST_TRIGGER_RADIUS = 80   # 自爆触发半径
+SUICIDE_BLAST_DAMAGE_RADIUS = 64    # 自爆伤害半径
+STEALTH_CYCLE = 2.0           # 隐形周期
+STEALTH_VISIBLE_FRAC = 0.15   # 显形时长占比
+ARMOR_HP = 3                  # 装甲血量
+ROCKET_SPEED_MULT = 2.0       # 火箭速度倍率
+BOUNCE_COUNT = 1              # 弹跳次数
+SPECIAL_COLORS = {
+    "suicide": (255, 100, 0), "stealth": (150, 150, 220),
+    "armor": (80, 80, 80),   "rocket": (220, 200, 60),
+    "bounce": (200, 80, 200),
+}
+```
+
+### 1.11 F20 背景音乐
+
+```python
+MUSIC_ENABLED = True
+MUSIC_VOLUME = 0.35
+MUSIC_SAMPLE_RATE = 22050
 ```
 
 ---
@@ -110,12 +160,6 @@ AABB 碰撞，a 和 b 需要 `.rect` 或本身是 Rect。
 
 ### `line_of_sight(start, end, tilemap) -> bool`
 检查两点（中心像素）之间是否有 `blocks_bullet=True` 的瓦片阻挡。仅支持水平/垂直直线。
-- `start`, `end`：`(x, y)` 像素
-- `tilemap`：`TileMap` 实例
-- 返回 `True` 表示视线通畅
-
-### `grid_of(px, py) -> (col, row)` / `grid_size(px, py) -> (TILE, TILE)`
-辅助函数（实际项目用 `TileMap.world_to_grid` 替代）。
 
 ---
 
@@ -128,487 +172,533 @@ AABB 碰撞，a 和 b 需要 `.rect` 或本身是 Rect。
 绘制一颗子弹（圆 + 方向尾迹）。
 
 ### `draw_tile(surface, tile, rect)`
-按 tile 类型分派：
-- `TileEmpty` → 跳过
-- `TileBrick` → `_draw_brick(surface, rect, subtl)`
-- `TileSteel` → `_draw_steel(surface, rect)`
-- `TileGrass` → `_draw_grass(surface, rect)`
-- `TileWater` → `_draw_water(surface, rect)`（带时间动画）
-- `TileIce` → `_draw_ice(surface, rect)`
-- `TileBase` → `_draw_base(surface, rect, destroyed)`
+按 tile 类型分派：Empty / Brick / Steel / Grass / Water / **Ice (B5)** / Base。
 
 ### 内部辅助
 
-- `_darken(color, factor) -> tuple` — 颜色 × factor
-- 6 个 `_draw_xxx` 函数
+- `_darken(color, factor)` — 颜色 × factor
+- 7 个 `_draw_xxx` 函数
 
 ---
 
 ## 4. `utils/sound.py` — 音效管理
 
-### `play(name: str)`
-播放音效。`name ∈ {"fire", "explosion", "hit", "start"}`。失败静默。
-
-### `set_muted(muted: bool)` / `is_muted() -> bool`
-静音开关。
-
-### `is_available() -> bool`
-音效系统是否可用（mixer 初始化成功 + 至少加载了一个 wav）。
-
-### 内部
-
-- `_ensure_mixer()`：首次调用时初始化 pygame.mixer，缺失 wav 时自动调 `gen_sounds.main()` 生成
-- 模块级单例状态：`_mixer_initialized`, `_sounds`, `_muted`, `_disabled`
-
-## 4.5 `utils/events.py` — 事件总线（v1.4 阶段 A2）
-
-publish-subscribe 模块，单线程同步触发，异常隔离。为成就（F10）、回放（F13）、CI 钩子（F12）提供解耦的事件流。
-
-### 事件名常量
-
-| 常量 | 字符串 | Payload（kwargs） |
-|------|--------|--------------------|
-| `ENTITY_KILLED` | `"entity.killed"` | `kind`, `owner`, `x`, `y`, `score_delta` |
-| `POWERUP_PICKED` | `"powerup.picked"` | `type`, `x`, `y` |
-| `BASE_HIT` | `"base.hit"` | （无） |
-| `BASE_DESTROYED` | `"base.destroyed"` | （无） |
-| `LEVEL_COMPLETED` | `"level.completed"` | `score`, `level_index` |
-| `LEVEL_FAILED` | `"level.failed"` | `reason`：`"base_destroyed"` \| `"lives_zero"` |
-
-### `subscribe(event_name, callback) -> callable`
-订阅事件，返回 `unsubscribe()` 函数。同一事件可多个订阅者；同一 callback 多次 subscribe 会被加多次。
-
-### `publish(event_name, **kwargs) -> None`
-同步触发所有订阅者。遍历时复制列表，回调内 unsubscribe 不影响本次 publish。**单个订阅者抛错被 try/except 吞掉并打印 traceback，不影响其他订阅者。**
-
-### `clear() -> None`
-清空所有订阅（测试用）。游戏正常运行时不需要调用。
-
-### `subscriber_count(event_name) -> int`
-返回某事件当前订阅者数量（测试/调试用）。
-
-### 用法示例
-
 ```python
-from utils import events
-from utils.events import ENTITY_KILLED
-
-def on_kill(kind, owner, x, y, score_delta):
-    if kind == "enemy" and owner == "player":
-        achievements.unlock("first_blood")
-
-unsub = events.subscribe(ENTITY_KILLED, on_kill)
-# ... 之后
-unsub()  # 取消订阅
+play(name: str)         # 播放 fire/explosion/hit/start
+set_muted(muted)        # 静音开关
+is_muted() -> bool
+is_available() -> bool  # mixer OK + 至少加载了一个 wav
 ```
 
-### 当前 `game/level.py` 触发点
-
-| 触发位置 | 事件 | 说明 |
-|----------|------|------|
-| 敌人被玩家击杀（`score += 100` 后） | `ENTITY_KILLED` | 含 kind="enemy", owner="player", score_delta=100 |
-| 道具拾取（`_apply_powerup` 后） | `POWERUP_PICKED` | 含 type |
-| `_on_base_hit`（基地被子弹击中） | `BASE_HIT` | — |
-| 基地被毁（`update` 末尾检测） | `BASE_DESTROYED` + `LEVEL_FAILED(reason="base_destroyed")` | 一起发 |
-| 关卡完成（敌人全灭） | `LEVEL_COMPLETED` | 含 score, level_index |
-| `respawn_player` lives 用尽 | `LEVEL_FAILED(reason="lives_zero")` | — |
-| `base_destroyed()` | `LEVEL_FAILED(reason="base_destroyed")` | — |
-| `update` 中 lives 耗尽 | `LEVEL_FAILED(reason="lives_zero")` | — |
+启动时 wav 缺失自动调 `gen_sounds.main()` 生成。**所有失败静默不抛**。
 
 ---
 
-## 5. `utils/colors.py` — 颜色常量
+## 5. `utils/events.py` — 事件总线 (A2)
 
-`BLACK`, `WHITE`, `GRAY`, `DARK_GRAY`, `LIGHT_GRAY`,
-`PLAYER_COLOR/PLAYER_DARK`, `ENEMY_COLOR/ENEMY_DARK`,
-`BRICK/BRICK_DARK/BRICK_LIGHT`, `STEEL/STEEL_DARK/STEEL_LIGHT`,
-`GRASS/GRASS_DARK`, `WATER/WATER_LIGHT`, `ICE/ICE_LIGHT`,
-`BASE_BODY/BASE_DARK/BASE_DEAD`, `BULLET_COLOR/BULLET_OUTLINE`,
-`HUD_BG/HUD_TEXT/HUD_ACCENT`, `MENU_BG/MENU_TITLE/MENU_HINT/MENU_DARK`
+```python
+subscribe(event_name, callback) -> callable  # 返回 unsubscribe()
+publish(event_name, **kwargs)
+clear()                                     # 测试用
+subscriber_count(event_name) -> int
+```
 
-（详细 RGB 见 `utils/colors.py`）
+| 常量 | 字符串 | Payload（kwargs） | 触发位置 |
+|------|--------|--------------------|----------|
+| `ENTITY_KILLED` | `"entity.killed"` | `kind`, `owner`, `x`, `y`, `score_delta`, **C2 `is_boss`** | Level 敌人被击杀 |
+| `POWERUP_PICKED` | `"powerup.picked"` | `type`, `x`, `y` | Level 道具拾取 |
+| `BASE_HIT` | `"base.hit"` | （无） | 基地被子弹击中 |
+| `BASE_DESTROYED` | `"base.destroyed"` | （无） | 基地被毁 |
+| `LEVEL_COMPLETED` | `"level.completed"` | `score`, `level_index` | 关卡完成 |
+| `LEVEL_FAILED` | `"level.failed"` | `reason`: `"base_destroyed"` \| `"lives_zero"` | 关卡失败 |
+| `ACHIEVEMENT_UNLOCKED` | **C5** `"achievement.unlocked"` | `id: str` | 成就解锁 |
+
+`LEVEL_FAILED.reason` 取值常量：
+- `REASON_BASE_DESTROYED = "base_destroyed"`
+- `REASON_LIVES_ZERO = "lives_zero"`
 
 ---
 
-## 6. `game/game.py` — 顶层控制器
+## 6. `utils/i18n.py` — 国际化 (B6)
+
+```python
+t(key, **kwargs) -> str     # 查表 + format 占位符
+set_lang(lang: str) -> bool # 切换语言, 返回是否成功
+get_lang() -> str           # 当前语言 (zh/en)
+reload()                     # 重载 (开发用)
+available_langs() -> list   # 列出 i18n/ 下所有语言文件
+```
+
+字符串在 `i18n/zh.json` + `i18n/en.json`。K_L 切语言。
+
+---
+
+## 7. `utils/highscores.py` — 排行榜 (B2)
+
+```python
+DEFAULT_PATH = "data/highscores.json"
+MAX_ENTRIES = 10
+
+add_score(score, level, name="YOU", path=DEFAULT_PATH) -> (rank, scores)
+load_highscores(path=DEFAULT_PATH) -> list
+qualifies(score, scores) -> bool
+reset_for_test(path=DEFAULT_PATH)
+```
+
+JSON 格式：`{"scores": [{name, score, level, date}, ...]}`，按 score 降序，**原子写**（临时文件 + rename）。
+
+---
+
+## 8. `utils/achievements.py` — 成就系统 (C5)
+
+```python
+@dataclass(frozen=True)
+class Achievement:
+    id: str
+    name_key: str         # i18n key, e.g. "ach.first_blood.name"
+    desc_key: str
+    icon_color: tuple
+
+ACHIEVEMENTS: list[Achievement]   # 8 个
+get_achievement(aid: str) -> Achievement | None
+
+class Manager:
+    def __init__(path=DEFAULT_PATH)         # 自动订阅 events
+    def save()                               # 持久化
+    def on_level_start(mode)                 # 关卡开始 (重置 LevelState)
+    def on_level_tick(dt, mode)             # 每帧 (survival 计时)
+    def on_player_damaged(now)               # 玩家受伤 (untouchable/iron_wall 用)
+    def on_survival_tick(dt)                 # survival 模式单独接口
+    def process_event(name, **kwargs)        # 手动分发 (备用)
+    def is_unlocked(aid) -> bool
+    def unlocked_count() -> int
+    def total_count() -> int
+    def clear_recent()                       # 清空本会话新解锁
+    def close()                              # 取消订阅 (cleanup)
+```
+
+8 个成就：
+- **一次性**（跨会话）：first_blood / boss_slayer / powerup_collector / collector / legend
+- **关卡级**（本关重置）：sharpshooter / pacifist / survivor
+
+JSON 格式：`{"unlocked": [...], "unlock_times": {...}, "powerup_total": int, "powerup_types": [...]}`。
+
+---
+
+## 9. `utils/replay.py` — 回放/录像 (C6)
+
+```python
+KEY_NAMES = ("up", "down", "left", "right", "fire")  # 5 个动作
+DEFAULT_DIR = "data/replays"
+
+class Recorder:
+    def __init__(level_index, num_players=1)
+    def start()                          # 启动录制
+    def stop(final_score=0, result="completed")
+    def is_recording() -> bool
+    def record_frame(keys: dict)         # 每帧: {up, down, left, right, fire}
+    def save(name: str, directory=DEFAULT_DIR) -> str
+    def to_dict() -> dict
+
+class Player:
+    def load(path: str) -> bool
+    def get_keys_at(frame_idx: int) -> dict   # 越界返回全 False
+
+def list_replays(directory=DEFAULT_DIR) -> list
+def delete_replay(path: str)
+def reset_for_test(directory=DEFAULT_DIR)
+```
+
+JSON 格式：`{"name, date, level_index, num_players, frames: [{5 keys}], total_frames, final_score, result"}`。
+
+**限制**：不录 random 种子，重放时敌人位置/行为有偏差（但玩家按键序列一致）。
+
+---
+
+## 10. `utils/music.py` — 背景音乐 (F20)
+
+```python
+MUSIC_SAMPLE_RATE = 22050
+NOTE_FREQ: dict[str, float]   # C3-C5 频率表 (Hz)
+
+# 程序生成 (3 段, 8-bit chiptune 方波 + ADSR)
+generate_menu_bgm() -> pygame.mixer.Sound
+generate_game_bgm() -> pygame.mixer.Sound
+generate_victory_bgm() -> pygame.mixer.Sound
+
+class MusicManager:
+    def __init__(volume=MUSIC_VOLUME)
+    def set_enabled(enabled: bool)         # 关闭时停, 开启恢复
+    def is_enabled() -> bool
+    def set_volume(volume: float)          # [0, 1], 钳制
+    def get_volume() -> float
+    def play_track(name: str, loops=-1)     # menu/game/victory
+    def stop()                              # 保留 current_track (便于 set_enabled 恢复)
+    def pause()                             # 暂停 (K_P 调)
+    def resume()                            # 恢复
+    def current_track() -> str | None
+    def is_playing() -> bool                # 考虑 was_playing_before_pause
+
+def track_for_state(state: str) -> str | None
+# "menu" -> "menu", "playing" -> "game", "victory" -> "victory"
+# "paused" / "level_complete" / "game_over" -> None
+```
+
+**0 版权风险** — 不携带任何音乐文件，全部 `numpy` 程序合成。
+
+---
+
+## 11. `game/game.py` — 顶层控制器
 
 ### `class Game`
 
 ```python
-def __init__(self): ...         # 初始化 pygame + 状态
-def run(self) -> None:          # 主循环
-def handle_events(self) -> None # 输入分发
-def start_game(self) -> None    # 开始新游戏
-def restart(self) -> None       # 重开（= start_game）
-def next_level(self) -> None    # 下一关
-def update(self, dt: float) -> None  # 状态机更新
-def draw(self) -> None          # 渲染
+def __init__(self): ...           # 初始化 pygame + 状态 + achievements + music
+def run(self) -> None             # 主循环
+def handle_events(self) -> None  # 输入分发 (含 K_H/A/R/M/+/- 快捷键)
+def start_game(self) -> None      # 开始新游戏 + 启动 Recorder
+def restart(self) -> None         # = start_game
+def start_replay(path) -> bool    # C6 从回放文件启动
+def next_level(self) -> None      # 下一关 / VICTORY
+def update(self, dt) -> None      # 状态机 + 成就 + 回放 + BGM
+def draw(self) -> None            # 渲染 (含子视图路由)
+def _record_highscore(self)       # B2 上榜 (try/except 兜底)
+def _stop_recording(self, result) # C6 停止录制
 ```
+
+### 主菜单快捷键
+
+| 按键 | 作用 |
+|------|------|
+| Enter/Space | 开始 |
+| 1/2 | 1P/2P 模式 |
+| H | 排行榜 (B2) |
+| A | 成就 (C5) |
+| R | 回放列表 (C6) |
+| M | 开关 BGM (F20) |
+| +/- | 音量 (F20) |
+| L | 中英切换 (B6) |
+| ESC | 退出 |
 
 ---
 
-## 7. `game/level.py` — 关卡
+## 12. `game/level.py` — 关卡
 
 ### `class Level`
 
 ```python
-def __init__(self, level_index: int, lives: int, score: int)
-def _spawn_player(self) -> PlayerTank
-def _spawn_enemy(self) -> EnemyTank | None
-def respawn_player(self) -> None
+def __init__(self, level_index, lives, score, num_players=1, achievements=None)
+def _spawn_player(self, index=0, input_map=None) -> PlayerTank
+def _spawn_enemy(self) -> EnemyTank | None    # C3 15% 概率特殊
+def respawn_player(self, index=0) -> None
 def base_destroyed(self) -> None
-def update(self, dt: float) -> None
-def _apply_powerup(self, pu) -> None
-def _activate_shovel(self, duration: float) -> None
-def _restore_shovel(self) -> None
-def _on_base_hit(self, tile) -> None
-def draw(self, surface: pygame.Surface) -> None
-def _draw_scene(self, surface) -> None
+def update(self, dt) -> None                   # 一帧所有逻辑
+def _apply_powerup(self, pu, target_idx=0)    # C1 多玩家分发
+def _get_magnet_target() -> tuple | None       # B4 magnet 吸引
+def _activate_shovel(self, duration)           # 钢墙保护基地
+def _restore_shovel(self)
+def _on_base_hit(self, tile)                   # 基地被击中震屏
+def draw(self, surface)
+def _draw_scene(self, surface)
+def _all_players_dead(self) -> bool            # C1
 ```
 
 ### 模块常量
 
 ```python
 POWERUP_SOUND = {
-    "star":    "start",
-    "grenade": "explosion",
-    "helmet":  "hit",
-    "clock":   "start",
-    "shovel":  "hit",
-    "tank":    "start",
+    "star": "start", "grenade": "explosion", "helmet": "hit",
+    "clock": "start", "shovel": "hit", "tank": "start",
+    "magnet": "start", "laser": "hit", "mine": "hit",  # B4
 }
 ```
 
----
+### 关卡模式
 
-## 8. `game/hud.py` — HUD
-
-### `draw_hud(surface, lives, score, level, enemies_left, max_lives=3)`
-绘制顶部状态条。
-
-### `get_font(size, bold=False) -> pygame.font.Font`
-项目内统一字体入口（自动 CJK）。
-
-### `_find_cjk_font() -> str | None`
-查找系统 CJK 字体（缓存）。
+| mode | enemy_count | 行为 | 关卡 |
+|------|-------------|------|------|
+| `campaign`（默认） | 15-35 | 杀够 + 无存活 → completed | 1-6, 9-12 |
+| `survival` | inf | 永不自然完成，靠 failed | 7, 13 |
+| `boss` | 0 | BOSS 全死 → completed | 8, 14, 15 |
 
 ---
 
-## 9. `game/menu.py` — 菜单/结束画面
+## 13. `game/hud.py` — HUD
 
 ```python
-def draw_menu(surface, t=0.0) -> None
-def draw_pause(surface) -> None
-def draw_level_complete(surface, level, score, t) -> None
-def draw_game_over(surface, score, victory=False, t=0.0) -> None
+draw_hud(surface, lives, score, level, enemies_left, p2_lives=None)
+get_font(size, bold=False) -> pygame.font.Font
+_find_cjk_font() -> str | None    # 缓存
 ```
 
 ---
 
-## 10. `world/levels.py` — 关卡数据
-
-### `LEVELS: list[list[str]]`
-6 个关卡布局（17×17 字符串网格，见 `settings.GRID_W`/`GRID_H`）。
-
-### `get_level(index) -> list[str]`
-循环取关卡布局。
-
-### `get_level_difficulty(index) -> dict`
-循环取难度配置。
-
-### `get_total_levels() -> int`
-返回 6。
-
----
-
-## 11. `world/tilemap.py` — 瓦片地图
-
-### `class TileMap`
+## 14. `game/menu.py` — 菜单/结束画面
 
 ```python
-def __init__(self, level_layout, player_spawn, base_pos, enemy_spawns)
-@classmethod
-def from_layout(cls, layout: list[str], char_map=None) -> TileMap
-def get_tile(self, col, row) -> Tile | None
-def pixel_to_grid(self, px, py) -> (col, row)
-def grid_to_pixel(self, col, row) -> (px, py)
-def world_to_grid(self, wx, wy) -> (col, row)
-def grid_to_world(self, col, row) -> (wx, wy)
-def rect_collides_solid(self, rect) -> bool
-def rect_hits_brick_subcell(self, rect) -> [(tile, col, row, sub), ...]
-def rect_hits_steel_or_base(self, rect) -> [(tile, col, row), ...]
-def draw(self, surface) -> None
-def draw_foreground(self, surface) -> None
-```
-
-### `CHAR_TO_TILE: dict`
-字符 → 瓦片类映射。
-
----
-
-## 12. `world/tile.py` — 瓦片类型
-
-```python
-class Tile:
-    blocks_tank: bool = False
-    blocks_bullet: bool = False
-    destructible: bool = False
-    bullet_consumed: bool = True
-    def on_bullet_hit(self, bullet, sub_index=0) -> bool: ...
-
-class TileEmpty(Tile): pass
-class TileBrick(Tile):
-    subtl: int  # 4 位掩码
-    @property
-    def alive(self) -> bool
-    def on_bullet_hit(self, bullet, sub_index=0) -> bool
-    def blocks_tank_now(self) -> bool
-class TileSteel(Tile): ...
-class TileGrass(Tile): ...
-class TileWater(Tile): ...
-class TileIce(Tile): ...
-class TileBase(Tile):
-    destroyed: bool
-    def on_bullet_hit(self, bullet, sub_index=0) -> bool
+draw_menu(surface, t, num_players)        # 主菜单
+draw_pause(surface)                       # 暂停遮罩
+draw_level_complete(surface, level, score, t)
+draw_game_over(surface, score, victory, t)
+draw_highscores(surface, scores, t)        # B2
+draw_achievements(surface, manager, t)     # C5
+draw_replay_list(surface, replays, sel, t)  # C6
 ```
 
 ---
 
-## 13. `entities/tank.py` — 坦克基类
-
-### `class Tank`
+## 15. `game/input.py` — 输入抽象
 
 ```python
-BASE_SPEED = 96
-SNAP_RATE = 900
-TREAD_PERIOD = 6
-FIRE_COOLDOWN = 0.5
+class InputMap:
+    __slots__ = ("player_id", "up_keys", "down_keys", "left_keys", "right_keys", "fire_keys")
+    def __init__(self, player_id, *, up_keys=(), down_keys=(), left_keys=(), right_keys=(), fire_keys=())
+    def is_mine(key) -> bool
+    def direction_for(key) -> str | None     # "up" / "down" / ...
+    def is_fire(key) -> bool
 
-def __init__(self, x, y, direction, color, dark_color, speed=None)
-def try_move(self, dt, dx, dy, tilemap, other_tanks) -> bool
-def can_move_now(self) -> bool
-def try_change_direction(self, new_dir, tilemap, other_tanks) -> bool
-def update_snap(self, dt) -> None
-def _collides(self, tilemap, other_tanks) -> bool
-def can_shoot(self) -> bool
-def shoot(self, bullets, effects=None) -> Bullet | None
-def update_cooldown(self, dt) -> None
-def on_hit(self, bullet) -> None
-def draw(self, surface) -> None
-```
-
-### `snap_to_grid(value, size=TANK_SIZE) -> int`
-模块级辅助：吸附到 TILE 边界。
-
----
-
-## 13.5 `game/input.py` — 输入抽象层（v1.6 阶段 A4）
-
-把"玩家 → 键位"做成数据, 1 玩家时 `P1_INPUT` 兼容旧行为, 双打时 `P2_INPUT` 独立控制。
-
-### `class InputMap`
-
-```python
-class InputMap(player_id, *, up_keys=(), down_keys=(),
-               left_keys=(), right_keys=(), fire_keys=())
-```
-
-玩家 ID + 5 个动作的键位元组（每个动作可绑多个键 alias）。
-
-### 方法
-
-| 方法 | 说明 |
-|------|------|
-| `is_mine(key) -> bool` | 该 key 是否属于本玩家 (5 个键位集内) |
-| `direction_for(key) -> str \| None` | 把 key 翻译为 `"up"` / `"down"` / `"left"` / `"right"`, 不属于返回 None |
-| `is_fire(key) -> bool` | 该 key 是否在 fire 键位集 |
-
-### 全局常量
-
-| 常量 | 键位 |
-|------|------|
-| `P1_INPUT` | `up=(K_w, K_UP)`, `down=(K_s, K_DOWN)`, `left=(K_a, K_LEFT)`, `right=(K_d, K_RIGHT)`, `fire=(K_SPACE, K_j)` |
-| `P2_INPUT` | `up=(K_UP,)`, `down=(K_DOWN,)`, `left=(K_LEFT,)`, `right=(K_RIGHT,)`, `fire=(K_RETURN, K_RSHIFT)` |
-
-`P1_INPUT` 包含方向键 alias 保持 1 玩家兼容（A1 决策），`P2_INPUT` 不响应 WASD 防止冲突。
-
-### `PlayerTank.__init__` 新增参数
-
-```python
-PlayerTank(x, y, input_map=None)
-```
-
-- 不传 → `input_map=P1_INPUT`（兼容旧调用）
-- 双打时 `Game.start_game` 创建 P2 时传 `P2_INPUT`
-
-### `PlayerTank.handle_event` 行为
-
-`handle_event` 先用 `self.input_map.is_mine(event.key)` 过滤事件，**自己的键才处理**。同一事件传给多个 PlayerTank 时，各自按自己的 input_map 决定是否响应——A1 review 标记的"P2 共享 P1 键位"问题通过此抽象解决。
-
-## 14. `entities/player.py` — 玩家
-
-### `class PlayerTank(Tank)`
-
-```python
-BASE_SPEED = PLAYER_SPEED    # 120
-FIRE_COOLDOWN = PLAYER_FIRE_COOLDOWN  # 0.45
-SLIDE_DURATION = 0.10
-
-def __init__(self, x, y)
-def handle_event(self, event) -> None
-def _active_direction(self) -> (dx, dy) | None
-def update(self, dt, tilemap, other_tanks, bullets, effects=None) -> None
-```
-
-**独有字段**：`keys`, `key_press_time`, `_time`, `slide_timer`, `slide_dir`, `upgrade_level`, `invincible`, `frozen_enemies_timer`
-
----
-
-## 15. `entities/enemy.py` — 敌人
-
-### `class EnemyTank(Tank)`
-
-```python
-BASE_SPEED = ENEMY_SPEED    # 72
-
-def __init__(self, x, y, tier=0, enemy_speed=None)
-def update(self, dt, tilemap, other_tanks, bullets, player, effects=None,
-           base_pos=None, target_priority="player") -> None
-def _choose_target_dir(self, tilemap, player, base_pos, priority) -> (dx, dy) | None
-def _dir_to_target(self, tilemap, target_center) -> (dx, dy) | None
-def on_hit(self, bullet) -> None
-```
-
-### 模块常量
-
-```python
-TIER_FIRE_COOLDOWN = {0: (0.8, 1.6), 1: (0.6, 1.2), 2: (0.8, 1.6)}
-TIER_SPEED_MULT    = {0: 1.0, 1: 1.0, 2: 1.25}
-TIER_BREAKS_STEEL  = {0: False, 1: False, 2: True}
+P1_INPUT = InputMap(0, up=(K_w,), down=(K_s,), left=(K_a,), right=(K_d,), fire=(K_SPACE, K_j))
+P2_INPUT = InputMap(1, up=(K_UP,), down=(K_DOWN,), left=(K_LEFT,), right=(K_RIGHT,), fire=(K_RETURN, K_RSHIFT))
 ```
 
 ---
 
-## 16. `entities/bullet.py` — 子弹
-
-### `class Bullet`
+## 16. `entities/tank.py` — 坦克基类
 
 ```python
-TRAIL_LEN = 6
+class Tank:
+    BASE_SPEED = 96
+    SNAP_RATE = 900
+    TREAD_PERIOD = 6
+    FIRE_COOLDOWN = 0.5
 
-def __init__(self, x, y, direction, owner)
-def update(self, dt, tilemap, bullets, tanks, base_callback, effects=None) -> None
-def _spawn_explosion(self, effects, scale=1.0, big=False) -> None
-def draw(self, surface) -> None
+    def __init__(self, x, y, direction, color, dark_color, speed=None)
+    def try_move(self, dt, dx, dy, tilemap, other_tanks) -> bool
+    def try_change_direction(self, new_dir, tilemap, other_tanks) -> bool
+    def update_snap(self, dt)
+    def can_move_now(self) -> bool
+    def shoot(self, bullets, effects=None) -> Bullet | None
+    def on_hit(self, bullet)                 # hp -= 1, hp<=0 -> dead
+    def update_cooldown(self, dt)
+    def draw(self, surface)
 ```
 
-**字段**：`direction`, `owner`, `rect`, `dead`, `can_break_steel`, `trail`, `size`
+### 关键字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `rect` | `pygame.Rect` | 碰撞盒 |
+| `dir` | `(dx, dy)` | 当前朝向 |
+| `color` / `dark_color` | `tuple` | 车身主色 / 履带阴影 |
+| `speed` | `float` | 实际速度 |
+| `cooldown` | `float` | 开火冷却 |
+| `dead` | `bool` | 死亡标记 |
+| `flashing_time` | `float` | 无敌闪烁 |
+| `snap_axis` | `None / 'x' / 'y'` | 软吸附进行中 |
+| `snap_target` | `int` | 吸附终点 |
+| `tread_phase` | `float` | 履带动画 |
+| `is_player` | `bool` | 玩家标记 |
+| `hit_flash_time` | `float` | 被击中闪红 |
+| `killed_by_powerup` | `bool` | 避免双重计分 |
+| `hp` | `int` | **C2** 多血（默认 1，BOSS=10，装甲=3） |
+| `breaks_steel` | `bool` | 子弹破钢墙 |
 
 ---
 
-## 17. `entities/powerup.py` — 道具
-
-### `class PowerUp`
+## 17. `entities/player.py` — 玩家
 
 ```python
-LIFETIME = 12.0
+class PlayerTank(Tank):
+    BASE_SPEED = PLAYER_SPEED
+    FIRE_COOLDOWN = PLAYER_FIRE_COOLDOWN
+    SLIDE_DURATION = 0.10
 
-def __init__(self, x: int, y: int, ptype: str)
-def update(self, dt) -> None
-def draw(self, surface) -> None
-def _draw_icon(self, surface, x, y, w, h) -> None
+    def __init__(self, x, y, input_map=None)
+    def handle_event(self, event)
+    def _active_direction(self) -> tuple | None
+    def update(self, dt, tilemap, other_tanks, bullets, effects=None)
+    def draw(self, surface)
 ```
 
-### 模块级
+**独有字段**：`keys`, `key_press_time`, `_time`, `slide_timer`, `slide_dir`, `upgrade_level`, `invincible`, `frozen_enemies_timer`, `lives` (C1), `player_id` (C1), `input_map` (C1), `magnet_timer` (B4), `laser_timer` (B4), **`on_ice` (B5)**。
+
+**B5 冰面**：每帧检测中心点瓦片类型 → `on_ice=True` 时 `update_snap` 跳过 + 滑行 `slide_timer` 不衰减。
+
+---
+
+## 18. `entities/enemy.py` — AI 敌人
 
 ```python
-ALL_TYPES = ["star", "grenade", "helmet", "clock", "shovel", "tank"]
-TYPE_COLORS = {...}  # 各 type 对应颜色
+class EnemyTank(Tank):
+    BASE_SPEED = ENEMY_SPEED
+
+    def __init__(self, x, y, tier=0, enemy_speed=None, is_powerup_carrier=None)
+    def update(self, dt, tilemap, other_tanks, bullets, player, effects=None,
+               base_pos=None, target_priority="player")
+    def on_hit(self, bullet)
+    def _choose_target_dir(self, tilemap, player, base_pos, priority) -> tuple | None
+    def _dir_to_target(self, tilemap, target_center) -> tuple | None
+```
+
+**第 5 个位置参数是 `player`（不是 effects）** — C2 review 修过的关键。
+
+**Tier 系统**：
+- tier 0 灰 / tier 1 红 / tier 2 绿
+- tier 2 速度 × 1.25 + 破钢墙
+- tier 1 开火更准
+
+**B1 红闪敌人**：`is_powerup_carrier=True` → 100% 掉道具 + 鲜红色 + 闪白。
+
+---
+
+## 19. `entities/boss.py` — BOSS (C2)
+
+```python
+class BossTank(Tank):
+    FIRE_COOLDOWN = BOSS_FIRE_COOLDOWN
+
+    def __init__(self, x, y, color=None, dark_color=None)
+    def update(self, dt, tilemap, other_tanks, bullets, player,
+               effects=None, base_pos=None, target_priority="player")
+```
+
+**简化 AI**：沿 `self.dir` 直线移动 + 撞墙 180° 反弹 + 1.5s 周期开火。hp=BOSS_HP (10)，破钢墙。
+
+**签名约定**：第 5 个位置参数是 `player`（跟 EnemyTank 对齐），让 `Level.update` 通用调用。
+
+---
+
+## 20. `entities/special.py` — 5 种特殊敌人 (C3)
+
+```python
+class SuicideEnemy(EnemyTank):    # 距玩家 <80px 自爆
+class StealthEnemy(EnemyTank):    # 周期 2s 显形 0.3s
+class ArmorEnemy(EnemyTank):      # hp=3
+class RocketEnemy(EnemyTank):     # 子弹 2x 速 + 破钢墙
+class BounceEnemy(EnemyTank):     # 子弹反弹 1 次
+
+SPECIAL_ENEMY_CLASSES = [SuicideEnemy, StealthEnemy, ArmorEnemy, RocketEnemy, BounceEnemy]
+```
+
+每个都覆写 `__init__` 强制颜色（避免被 tier 覆盖），5% 概率在 campaign 模式生成。
+
+---
+
+## 21. `entities/bullet.py` — 子弹
+
+```python
+class Bullet:
+    TRAIL_LEN = 6
+
+    def __init__(self, x, y, direction, owner)
+    def update(self, dt, tilemap, bullets, tanks, base_callback, effects=None)
+    def _spawn_explosion(self, effects, scale, big=False)
+    def _bounce(self)                          # C3 弹跳内部
+    def draw(self, surface)
+```
+
+**关键字段**：`direction`, `owner` ("player"/"enemy"), `rect`, `dead`, `can_break_steel`, `is_laser` (B4), **`bounces_left` (C3)**, **`speed_multiplier` (C3)**, `trail`。
+
+---
+
+## 22. `entities/powerup.py` — 道具 (9 种)
+
+```python
+class PowerUp:
+    def __init__(self, x, y, type)
+    def update(self, dt, magnet_target=None)  # B4 magnet 吸引
+    def draw(self, surface)
+
 def spawn_random_powerup(x, y) -> PowerUp
 ```
 
+9 种 type：`star` / `grenade` / `helmet` / `clock` / `shovel` / `tank` / **B4 `magnet`** / **B4 `laser`** / **B4 `mine`**。
+
 ---
 
-## 18. `entities/effects.py` — 特效
-
-### `class MuzzleFlash`
+## 23. `entities/mine.py` — 地雷 (B4)
 
 ```python
-def __init__(self, x, y, direction, owner_color)
-def update(self, dt) -> None
-def draw(self, surface) -> None
-```
+class Mine:
+    def __init__(self, x, y, lifetime=10.0)
+    def update(self, dt, enemies, effects, events) -> int  # 返回击杀数
+    def draw(self, surface)
 
-### `class Particle`
-
-```python
-def __init__(self, x, y, vx, vy, color, life)
-def update(self, dt) -> bool  # 返回是否还活着
-def draw(self, surface) -> None
-```
-
-### `class Explosion`
-
-```python
-def __init__(self, x, y, big=False)
-def update(self, dt) -> None
-def draw(self, surface) -> None
+def spawn_mines_around(player, count=3) -> list[Mine]
 ```
 
 ---
 
-## 19. `entities/base.py` — 基地（重导出）
+## 24. `entities/effects.py` — 特效
 
 ```python
-from world.tile import TileBase
-__all__ = ["TileBase"]
+class MuzzleFlash:
+    def __init__(self, x, y, direction, color)
+    def update(self, dt)
+    def draw(self, surface)
+
+class Explosion:
+    def __init__(self, x, y, big=False)
+
+class Particle: ...   # Explosion 内部用
 ```
 
 ---
 
-## 20. `main.py` — 入口
+## 25. `world/tilemap.py` — 地图
 
 ```python
-from game.game import Game
-def main(): Game().run()
-if __name__ == "__main__": main()
+class TileMap:
+    def __init__(self, tiles, player_spawn, enemy_spawns, base_tile, base_pos)
+    @classmethod
+    def from_layout(cls, layout: list[str]) -> TileMap
+    def rect_collides_solid(self, rect) -> bool
+    def rect_hits_brick_subcell(self, rect) -> list
+    def rect_hits_steel_or_base(self, rect) -> list
+    def draw(self, surface)
+    def draw_foreground(self, surface)        # 草丛层
+    def world_to_grid(self, x, y) -> (col, row)
+    def grid_to_world(self, col, row) -> (x, y)
+```
+
+### 布局字符
+
+| 字符 | 含义 |
+|------|------|
+| `.` | TileEmpty 空地 |
+| `B` | TileBrick 砖块 |
+| `S` | TileSteel 钢墙 |
+| `G` | TileGrass 草丛 |
+| `W` | TileWater 水域 |
+| `I` | **B5** TileIce 冰面 |
+| `P` | 玩家出生点 |
+| `E` | 敌人出生点（最多 3 个有效）|
+| `X` | 基地（关 7/13/8/14/15 不用） |
+
+---
+
+## 26. `world/levels.py` — 15 关数据
+
+```python
+LEVELS = [LEVEL_1, ..., LEVEL_15]   # 15 项
+
+def get_level(index: int) -> list[str]      # index % len(LEVELS)
+def get_level_difficulty(index: int) -> dict
+def get_total_levels() -> int               # 15
 ```
 
 ---
 
-## 21. `tools/gen_sounds.py` — 音效生成
+## 27. 公开事件触发点（速查）
 
-```python
-def make_fire() -> list[int]      # 300Hz->100Hz 短扫频 0.08s
-def make_explosion() -> list[int] # 200Hz->40Hz + 噪声 0.3s
-def make_hit() -> list[int]       # 短促咔哒 0.04s
-def make_start() -> list[int]     # 上行扫频 0.2s
-def main() -> None                # 生成到 assets/sounds/
-```
-
----
-
-## 22. 测试套件
-
-| 文件 | 测试项 | 关键依赖 |
-|------|--------|----------|
-| `tests/test_smoke.py` | 15 项 | pygame + Level 真实实例 |
-| `tests/test_features.py` | 15 功能 + 7 回归 | 6 关数据/道具/AI tier/视觉/音效/CJK |
-| `tests/test_gameplay.py` | 端到端模拟 | 5s 模拟 + 截图 |
-| `tests/test_visual.py` | 视觉验证 | 截图 |
-| `tests/test_chinese_menu.py` | 中文菜单 | CJK 字体 |
-
-**统一设置**：`os.environ.setdefault("SDL_VIDEODRIVER", "dummy")` → 无头模式。
-
----
-
-## 23. 资产
-
-| 文件 | 生成方式 |
-|------|----------|
-| `assets/sounds/fire.wav` | `tools/gen_sounds.py` 启动时自动生成（缺失时） |
-| `assets/sounds/explosion.wav` | 同上 |
-| `assets/sounds/hit.wav` | 同上 |
-| `assets/sounds/start.wav` | 同上 |
-
-**无需任何图片素材**。
+| 模块 | 事件 | Payload |
+|------|------|---------|
+| Level 敌人被玩家击杀 | `ENTITY_KILLED` | kind=enemy, owner=player, x, y, score_delta=100, **C2 is_boss** |
+| Level 自爆者自爆 | `ENTITY_KILLED` | kind=enemy, owner=powerup, score_delta=0 |
+| Level 玩家拾取道具 | `POWERUP_PICKED` | type, x, y, **C1 player_id** |
+| Level 基地被子弹击中 | `BASE_HIT` | — |
+| Level 基地被毁 | `BASE_DESTROYED` + `LEVEL_FAILED(reason="base_destroyed")` | — |
+| Level 通关 | `LEVEL_COMPLETED` | score, level_index |
+| Level lives 用尽 | `LEVEL_FAILED(reason="lives_zero")` | — |
+| Game GAME_OVER 时 | `LEVEL_FAILED` | — |
+| **C5** Manager 解锁成就 | `ACHIEVEMENT_UNLOCKED` | id |

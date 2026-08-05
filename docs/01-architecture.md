@@ -5,50 +5,81 @@
 ## 1. 顶层架构
 
 ```
-            ┌─────────────────────────────────────────────┐
-            │              main.py (入口)                 │
-            │           Game().run() 主循环                │
-            └──────────────────────┬──────────────────────┘
-                                   │
-            ┌──────────────────────▼──────────────────────┐
-            │           game/game.py (Game 控制器)         │
-            │   状态机: MENU/PLAYING/PAUSED/              │
-            │          LEVEL_COMPLETE/GAME_OVER/VICTORY    │
-            │   每帧: handle_events → update → draw        │
-            └──────────────────────┬──────────────────────┘
-                                   │ self.level
-            ┌──────────────────────▼──────────────────────┐
-            │        game/level.py (Level 关卡)           │
-            │   持有: tilemap, player, enemies, bullets,  │
-            │         powerups, effects                    │
-            │   负责: 敌人生成、道具、震屏、重生、计分    │
-            └──────────────────────┬──────────────────────┘
-                                   │
-        ┌──────────┬──────────┬───┴────┬──────────┬──────────┐
-        ▼          ▼          ▼        ▼          ▼          ▼
-   entities/    world/    entities/  entities/  entities/  entities/
-   player.py   tilemap.py enemy.py  bullet.py  powerup.py effects.py
-        │          │
-        ▼          ▼
-   entities/   world/
-   tank.py     tile.py        utils/   settings.py
-   (基类)      (7 瓦片类)    (collision, draw, sound, colors)
+                    ┌─────────────────────────────────────────┐
+                    │              main.py (入口)              │
+                    │           Game().run() 主循环             │
+                    └──────────────────────┬──────────────────┘
+                                           │
+                    ┌──────────────────────▼──────────────────┐
+                    │           game/game.py (Game 控制器)    │
+                    │   状态机: MENU/PLAYING/PAUSED/           │
+                    │     LEVEL_COMPLETE/GAME_OVER/VICTORY    │
+                    │   每帧: handle_events → update → draw   │
+                    │   持有: achievements, replay, music     │
+                    └──────────────────────┬──────────────────┘
+                                           │ self.level
+                    ┌──────────────────────▼──────────────────┐
+                    │        game/level.py (Level 关卡)        │
+                    │   持有: tilemap, players, enemies,      │
+                    │         bullets, powerups, mines, effects│
+                    │   模式: campaign / survival / boss      │
+                    │   关卡: 1-15 (10 camp + 2 surv + 3 BOSS) │
+                    └─────────┬──────────────┬───────────────┘
+                              │              │
+        ┌─────────────────────┘              └────────────────────┐
+        ▼                                                            ▼
+  ┌────────────────────┐                                ┌────────────────────┐
+  │     entities/      │                                │      world/         │
+  │   tank.py (基类)   │                                │   tile.py (7 类)    │
+  │   player.py        │                                │   tilemap.py        │
+  │     (B5 冰面打滑)  │                                │     (17×17 grid)    │
+  │   enemy.py (3 tier)│                                │   levels.py         │
+  │   boss.py (C2)     │                                │     (15 关数据)     │
+  │   special.py (C3)  │                                └────────────────────┘
+  │     5 种特殊敌人   │
+  │   bullet.py        │
+  │     (C3 弹跳/加速) │
+  │   powerup.py (9种) │
+  │   mine.py (B4)     │
+  │   effects.py       │
+  │   base.py          │
+  └────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+  ┌─────────┐           ┌──────────┐          ┌─────────────┐
+  │  utils/ │           │ i18n/    │          │   data/      │
+  │  (13)   │           │ zh.json  │          │ (运行时生成) │
+  │         │           │ en.json  │          │             │
+  │ events  │           └──────────┘          │ highscores  │
+  │ sound   │                                │ achievements│
+  │ colors  │                                │ replays/    │
+  │ collision│                               │ .json       │
+  │ draw    │                                └─────────────┘
+  │ i18n    │
+  │ highscores│
+  │ achievements│
+  │ replay  │
+  │ music   │
+  │ input   │
+  │ hud ... │
+  └─────────┘
 ```
 
 ## 2. 状态机
 
 ```
               ┌──────┐
-              │ MENU │ ◀────────────────────┐
-              └───┬──┘                      │
-            Enter│Space                      │ Restart
-                  ▼                          │
-              ┌─────────┐  P (toggle)  ┌────────┐
-              │PLAYING  │◀─────────────▶│PAUSED │
-              └────┬────┘   P           └────────┘
-       清完敌人    │  │基地毁/命0
-                  ▼  ▼
-        ┌─────────────┐  ┌───────────┐
+              │ MENU │ ◀─────────────────────────────┐
+              └───┬──┘                               │
+        Enter/H/A/R│/M  (各子菜单)                  │ Restart
+                   ▼                                │
+              ┌─────────┐  P (toggle)  ┌────────┐   │
+              │PLAYING  │◀─────────────▶│PAUSED │   │
+              └────┬────┘   P           └────────┘   │
+       清完敌人    │  │基地毁/命0                     │
+   (boss 全死)     ▼  ▼                              │
+        ┌─────────────┐  ┌───────────┐               │
         │LEVEL_COMPLETE│  │ GAME_OVER │ ── R ──▶ MENU (重开)
         └──────┬──────┘  └───────────┘
         2 秒后 │
@@ -64,6 +95,12 @@
      │VICTORY  │
      └─────────┘
 ```
+
+**菜单子视图**（state==MENU 时）：
+- `main`：主菜单（默认）
+- `highscores`（K_H 切换）：排行榜 top 10
+- `achievements`（K_A）：8 个成就 + 解锁状态
+- `replays`（K_R）：录像列表 + K_Enter 播放 / Del 删除
 
 **状态转换的实现位置**：`game/game.py` 的 `Game.update()` 状态分发。
 
@@ -93,66 +130,79 @@ def run(self):
 
 ```
 Game.update(dt)
+    │
+    ├─ BGM 切换 (F20): state 变化时 play/pause/stop
+    │
+    ├─ 重放模式 (C6): ReplayPlayer.get_keys_at(frame_idx) → 覆盖 player.keys
+    ├─ 录制模式 (C6): 录 player.keys → Recorder
+    │
     └─→ Level.update(dt)
             │
+            ├─ on_level_tick(survival 计时) → Manager
             ├─ shovel 倒计时检查 → 复原基地砖墙
-            ├─ _spawn_enemy()  → 敌人数未满 + spawn 间隔到 → 新 EnemyTank
+            ├─ _spawn_enemy()  → 敌人数未满 + spawn 间隔到
+            │   ├─ 普通: EnemyTank (3 tier)
+            │   └─ 15% 概率: SpecialEnemy (C3 5 种之一)
             │
-            ├─ Player.update(dt, tilemap, other_tanks, bullets, effects)
-            │       │
-            │       ├─ 方向优先级 → try_change_direction → 软吸附
-            │       ├─ try_move(dx, dy) → AABB 碰撞
-            │       └─ 按 fire → shoot() → Bullet + MuzzleFlash
+            ├─ 每个 Player.update (C1 支持多玩家)
+            │   ├─ B5 冰面检测 → on_ice 标记 → 不吸附持续滑
+            │   ├─ 方向优先级 → try_change_direction → 软吸附
+            │   ├─ try_move(dx, dy) → AABB 碰撞
+            │   └─ 按 fire → shoot() → Bullet + MuzzleFlash
             │
-            ├─ 每 Enemy.update(dt, ..., player, base_pos, target_priority)
-            │       ├─ 检查 _choose_target_dir → line_of_sight
-            │       ├─ 每 0.8~1.6s 选新方向（55% 概率优先瞄准）
-            │       ├─ try_move
-            │       └─ 每 cooldown 秒开火
+            ├─ 每个 Enemy.update (EnemyTank / BossTank / SpecialEnemy)
+            │   ├─ C2 BossTank: 简化 AI, 沿 dir 直线移动 + 撞墙 180° 反弹
+            │   ├─ C3 SuicideEnemy: 距玩家 <80px 自爆
+            │   ├─ C3 StealthEnemy: 周期 2s 显形 0.3s
+            │   ├─ C3 ArmorEnemy: hp=3
+            │   ├─ C3 RocketEnemy: 子弹 2x 速 + 破钢墙
+            │   └─ C3 BounceEnemy: 子弹反弹 1 次
             │
-            ├─ 每 Bullet.update(dt, tilemap, bullets, tanks, base_callback)
-            │       └─ 移动 + 碰撞检查（砖/钢/基地/坦克/子弹）
+            ├─ 每个 Bullet.update (C3 支持 bounces_left / speed_multiplier)
             │
-            ├─ 清理 dead 实体
-            │   └─ 新死亡的敌人: 25% 概率掉 PowerUp
+            ├─ 清理 dead 实体 → 触发 ENTITY_KILLED 事件
+            │   ├─ C5 Manager 收到 → 可能解锁 first_blood/sharpshooter/...
+            │   └─ 红闪敌人 100% 掉道具, 普通 25% 掉
             │
-            ├─ 每 PowerUp.update + 拾取检测
-            │   └─ _apply_powerup() → 影响 player 状态 / 全屏爆炸 / shovel
+            ├─ 道具 + magnet 吸引
+            ├─ 地雷 AOE (B4)
+            ├─ 特效 (MuzzleFlash / Explosion)
             │
-            ├─ 每 Effect.update
-            │
-            ├─ 基地 destroyed? → failed = True
-            └─ 敌人全灭 + 全部生成完? → completed = True
+            ├─ 基地 destroyed? → failed = True → BASE_DESTROYED
+            └─ 通关条件: campaign 全杀 / survival / boss 全 BOSS 死
 
 Game.draw()
     ├─ self.screen.fill(BLACK)
-    ├─ draw_hud(...)
+    ├─ draw_hud(lives, score, level_index, enemies_left)
     ├─ self.level.draw(surface)
-    │       └─ _draw_scene() → tilemap → 敌人 → 玩家 → 子弹 → 道具 → 特效 → 草丛
+    │       └─ _draw_scene() → tilemap → 敌人 → 玩家 → 子弹
+    │          → 道具 → 地雷 → 特效 → 重生提示 → 草丛
     └─ 状态遮罩（pause / complete / over / victory）
 ```
 
 ## 5. 模块依赖图
 
 ```
-                ┌─────────────┐
-                │ settings.py │ ←── 所有模块都引
-                └──────┬──────┘
-                       │
-       ┌───────────────┼───────────────┐
-       ▼               ▼               ▼
-   utils/*          world/*         entities/*
-       │               │               │
-       └───────────────┴───────────────┘
-                       │
-                       ▼
-                   game/*
-                       │
-                       ▼
-                  main.py
+                            ┌─────────────┐
+                            │ settings.py │ ←── 所有模块都引
+                            └──────┬──────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              ▼                    ▼                    ▼
+          utils/*              world/*              entities/*
+              │                    │                    │
+              └────────────────────┴────────────────────┘
+                                   │
+                                   ▼
+                               game/*
+                                   │
+                                   ▼
+                              main.py
 ```
 
 **重要**：模块之间**单向依赖**，没有循环 import。`game/level.py` 在文件内函数级导入 `entities.powerup`、`entities.effects` 等，避免顶层循环。
+
+**事件总线**（`utils/events.py`）解耦：Level 只 publish 事件，Achievements Manager / Sound / 等订阅，各做各事。
 
 ## 6. 关键设计决策
 
@@ -174,6 +224,8 @@ Game.draw()
 
 `Bullet` 不是 Sprite，是纯数据类。每帧把"上一帧中心位置"追加进 `trail`，画时用渐变小圆渲染 → 拖尾效果。`update` 用子步（steps=max(1, ...)）让高速子弹不穿透薄墙。
 
+**C3 扩展**：Bullet 加 `bounces_left`（弹跳次数）和 `speed_multiplier`（速度倍率，火箭 2.0）。
+
 ### 6.3 砖块子格破坏
 
 经典 Battle City 机制：每个砖块 = 2×2 子格（24px）。子弹只破坏命中的那一格，用位掩码 `subtl`（4 bit）记录：
@@ -189,45 +241,49 @@ if tile.subtl & (1 << sub_index):
 
 代替早期用 `__import__("entities.player")` 黑魔法动态判别身份。`Tank.__init__` 设 `is_player=False`，`PlayerTank.__init__` 末尾设 `True`。`Tank.shoot()` 用它决定 bullet owner 字符串。
 
-### 6.5 程序生成音效
+### 6.5 程序生成音效 + 音乐（F20）
 
-没有外部资源。`tools/gen_sounds.py` 用 `wave + struct + math` 生成 4 个 WAV。`utils/sound.py` 启动时如果发现 wav 缺失会自动调用生成器。**任何异常都被 try/except 吞掉，音效失败不影响游戏**。
+没有外部资源：
+- **音效**：`tools/gen_sounds.py` 用 `wave + struct + math` 生成 4 个 WAV
+- **音乐**：`utils/music.py` 用 `numpy` 合成 3 段 8-bit chiptune（菜单/游戏/胜利）
+- `utils/sound.py` 启动时如果发现 wav 缺失会自动调用生成器
+- **任何异常都被 try/except 吞掉，音效/音乐失败不影响游戏**
 
 ### 6.6 CJK 字体自动检测
 
 `game/hud.py: _find_cjk_font()` 在 Windows / macOS / Linux 上按优先级列表查找，找不到回退到等宽字体（中文显示为豆腐块但不会崩）。`get_font()` 是项目内统一入口。
 
-## 7. 渲染顺序（z 序）
+### 6.7 事件总线（pub-sub）
 
-```
-1. 清屏（黑色）
-2. HUD 背景
-3. 地图瓦片（tilemap.draw）
-4. 敌人
-5. 玩家
-6. 子弹
-7. 道具（闪烁 4 Hz）
-8. 特效（炮口闪光、爆炸粒子）
-9. 草丛（tilemap.draw_foreground，最后画，遮住坦克）
-10. 状态遮罩（暂停/通关/结束）
+为成就（F10）、回放（F13）、CI 钩子（F12） 提供解耦的事件流：
+
+```python
+from utils import events
+events.subscribe(events.ENTITY_KILLED, my_handler)
+events.publish(events.ENTITY_KILLED, kind="enemy", owner="player", ...)
 ```
 
-**为什么草丛最后画**：坦克"钻进"草丛只露炮管，是 Battle City 经典视觉。`tilemap.draw_foreground()` 单独画草丛层。
+**约定**：
+- 模块级单例
+- 事件名用点分命名空间: `'entity.killed'`, `'powerup.picked'`
+- 订阅者接收 `**kwargs`
+- 单个订阅者抛错被 try/except 吞掉, 打印 traceback, 不影响其他订阅者
+- 测试用 `events.clear()` 重置
 
-## 8. 关键文件清单
+### 6.8 多玩家独立 InputMap（C1）
 
-| 想改什么 | 看哪里 |
-|---------|--------|
-| 屏幕尺寸 / 帧率 | `settings.py` SCREEN_W/H, FPS |
-| 坦克速度 / 子弹速度 / 生命 | `settings.py` TANK_SPEED 等 |
-| 玩家开火冷却 | `settings.py` PLAYER_FIRE_COOLDOWN |
-| 敌人 tier 行为 | `entities/enemy.py` TIER_FIRE_COOLDOWN 等 dict |
-| 道具类型 / 效果 | `entities/powerup.py` ALL_TYPES + `game/level.py` _apply_powerup |
-| 关卡难度 | `settings.py` LEVEL_DIFFICULTY |
-| 关卡布局 | `world/levels.py` LEVEL_1~6 |
-| 瓦片规则 | `world/tile.py` |
-| 视觉效果（颜色） | `utils/colors.py` |
-| 音效 | `utils/sound.py` + `tools/gen_sounds.py` |
-| 菜单文案 | `game/menu.py` |
-| 状态机 | `game/game.py` |
-| 主循环 | `game/game.py` Game.run() |
+每个玩家绑定一个 `InputMap`（P1=P1_INPUT, P2=P2_INPUT），各自响应自己的键。P1 和 P2 用不同键避免冲突（同屏双人合作）。
+
+### 6.9 持久化（JSON + 原子写）
+
+排行榜 / 成就 / 回放 都用 JSON 持久化到 `data/`：
+
+- `data/highscores.json` — 排行榜 top 10
+- `data/achievements.json` — 8 个成就解锁状态
+- `data/replays/<name>.json` — 录像文件
+
+**写策略**：`_atomic_write()` 先写临时文件再 rename，避免半写损坏。
+
+### 6.10 状态机菜单子视图
+
+`self.menu_view` 字段支持 `'main' / 'highscores' / 'achievements' / 'replays'`，主菜单按 K_H/A/R 切换子视图（K_M 切 BGM），`draw()` 根据 menu_view 调不同的 draw_* 函数。
